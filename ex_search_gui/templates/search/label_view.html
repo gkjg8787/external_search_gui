@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/searchlabel.css') }}" type="text/css">
+    <title>ラベル一覧</title>
+    <style>
+        .label-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+        .label-actions .btn-edit, .label-actions .btn-delete {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+        }
+        .btn-edit { background-color: #17a2b8; }
+        .btn-delete { background-color: #dc3545; }
+    </style>
+{% endblock %}
+
+{% block body %}
+
+<div class="container">
+    <h1>ラベル一覧</h1>
+
+    <div class="search-form">
+        <form method="get" action="{{ url_for('read_labels') }}">
+            <input type="text" name="label" placeholder="ラベル名で検索" value="{{ label or '' }}">
+            <button type="submit">検索</button>
+        </form>
+    </div>
+
+    {% if labels %}
+        <ul class="label-list">
+        {% for item in labels %}
+            <li class="label-item">
+                <div class="label-header">
+                    <strong>{{ item.label_name }}</strong>
+                    <div class="label-actions">
+                        {% if labels|length >= 5 %}
+                        <button class="toggle-details-btn" onclick="toggleDetails(this)">詳細</button>
+                        {% endif %}
+                        {# 編集ページは未実装のため、URLは仮置き #}
+                        <a href="#" class="btn-edit">編集</a>
+                        <button class="btn-delete" onclick="deleteLabel(this, {{ item.id }}, '{{ item.label_name }}')">
+                            削除
+                        </button>
+                    </div>
+                </div>
+                <div class="label-details {% if labels|length >= 5 %}collapsed{% endif %}">
+                    <p><strong>ベースURL:</strong> {{ item.base_url }}</p>
+                    <p><strong>クエリ:</strong> {{ item.query }}</p>
+                    <p><strong>クエリエンコーディング:</strong> {{ item.query_encoding }}</p>
+                    <p><strong>ダウンロードタイプ:</strong> {{ item.download_type }}</p>
+                    <p><strong>ダウンロード設定:</strong> <pre><code>{{ item.download_config | tojson(indent=2) }}</code></pre></p>
+                </div>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>表示するラベルがありません。</p>
+    {% endif %}
+</div>
+
+<script>
+function toggleDetails(button) {
+    const details = button.parentElement.nextElementSibling;
+    if (details.classList.contains('collapsed')) {
+        details.classList.remove('collapsed');
+        button.textContent = '閉じる';
+    } else {
+        details.classList.add('collapsed');
+        button.textContent = '詳細';
+    }
+}
+
+async function deleteLabel(button, labelId, labelName) {
+    if (!confirm(`ラベル「${labelName}」を本当に削除しますか？`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/labels/${labelId}/`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '削除に失敗しました。');
+        }
+
+        // 成功したら、画面から要素を削除
+        const labelItem = button.closest('.label-item');
+        labelItem.remove();
+
+    } catch (error) {
+        alert(`エラー: ${error.message}`);
+    }
+}
+</script>
+
+
+{% endblock %}

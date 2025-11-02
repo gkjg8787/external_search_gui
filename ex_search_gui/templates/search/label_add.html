@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/searchlabel.css') }}" type="text/css">
+    <title>ラベル追加</title>
+    <style>
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="url"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group textarea {
+            height: 200px;
+            font-family: monospace;
+        }
+        .form-actions {
+            text-align: right;
+        }
+        .form-actions button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .form-actions button:hover {
+            background-color: #0056b3;
+        }
+
+        /* ダークモード対応 */
+        @media (prefers-color-scheme: dark) {
+            .form-container {
+                background-color: #2d2d2d; /* ダークな背景色 */
+                box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            }
+            .form-group label {
+                color: #e0e0e0; /* 明るい文字色 */
+            }
+            .form-group input[type="text"],
+            .form-group input[type="url"],
+            .form-group select,
+            .form-group textarea {
+                background-color: #3c3c3c;
+                color: #e0e0e0;
+                border-color: #555;
+            }
+            .form-actions button {
+                background-color: #0056b3;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+
+<div class="container">
+    <h1>ラベル追加</h1>
+
+    <div class="form-container">
+        <form method="post" action="{{ url_for('read_labels_add_confirm') }}">
+            <div class="form-group">
+                <label for="label_name">ラベル名</label>
+                <input type="text" id="label_name" name="label_name" required>
+            </div>
+            <div class="form-group">
+                <label for="base_url">ベースURL</label>
+                <input type="url" id="base_url" name="base_url" required>
+            </div>
+            <div class="form-group">
+                <label for="query">クエリ</label>
+                <input type="text" id="query" name="query">
+            </div>
+            <div class="form-group">
+                <label for="query_encoding">クエリエンコーディング</label>
+                <input type="text" id="query_encoding" name="query_encoding" value="utf-8">
+            </div>
+            <div class="form-group">
+                <label for="download_type">ダウンロードタイプ</label>
+                <select id="download_type" name="download_type" onchange="fetchDownloadConfigTemplate()">
+                    {% for option in download_type_options %}
+                    <option value="{{ option }}">{{ option or 'None' }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="download_config">ダウンロード設定 (JSON)</label>
+                <textarea id="download_config" name="download_config">{}</textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit">確認</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+async function fetchDownloadConfigTemplate() {
+    const select = document.getElementById('download_type');
+    const optionType = select.value;
+    const textarea = document.getElementById('download_config');
+
+    if (!optionType) {
+        textarea.value = '{}';
+        return;
+    }
+
+    const response = await fetch(`{{ url_for('get_label_config_template') }}?option_type=${optionType}`);
+    const data = await response.json();
+    textarea.value = JSON.stringify(data, null, 2);
+}
+</script>
+
+{% endblock %}

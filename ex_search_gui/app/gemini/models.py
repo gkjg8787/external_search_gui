@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Any
+from typing import Optional, Any, Literal
 
 
 class Cookie(BaseModel):
@@ -8,7 +8,7 @@ class Cookie(BaseModel):
 
 
 class OnError(BaseModel):
-    action_type: str = "raise"  # "raise" or "retry"
+    action_type: Literal["raise", "retry"] = "raise"
     max_retries: int | None = None
     wait_time: float | None = None
     check_exist_tag: str = ""  # CSS selector

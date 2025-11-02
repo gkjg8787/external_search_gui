@@ -4,8 +4,9 @@ from fastapi import FastAPI, status, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 
-# from routers.html import search
-from routers.api import search
+
+from routers.api import search as api_search
+from routers.html import search as html_search
 from databases.sql.create_table import create_table
 from common.logger_config import configure_logger
 
@@ -22,7 +23,8 @@ app = FastAPI(lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-app.include_router(search.router)
+app.include_router(api_search.router)
+app.include_router(html_search.router)
 
 
 @app.get("/")

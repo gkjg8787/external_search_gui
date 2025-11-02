@@ -11,3 +11,7 @@ class SearchURLConfigRepository(ABC):
     @abstractmethod
     async def get_all(self, command: SearchURLConfigCommand) -> list[SearchURLConfig]:
         pass
+
+    @abstractmethod
+    async def delte_by_id(self, id: int):
+        pass

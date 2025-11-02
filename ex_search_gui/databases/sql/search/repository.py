@@ -43,12 +43,27 @@ class SearchURLConfigRepositorySQL(search_repo.SearchURLConfigRepository):
     ) -> list[m_search.SearchURLConfig]:
         stmt = select(m_search.SearchURLConfig)
         if command.label_name:
-            stmt = stmt.where(m_search.SearchURLConfig.label_name == command.label_name)
+            stmt = stmt.where(
+                m_search.SearchURLConfig.label_name.icontains(command.label_name)
+            )
         if command.base_url:
-            stmt = stmt.where(m_search.SearchURLConfig.base_url == command.base_url)
+            stmt = stmt.where(
+                m_search.SearchURLConfig.base_url.icontains(command.base_url)
+            )
         if command.download_type:
             stmt = stmt.where(
                 m_search.SearchURLConfig.download_type == command.download_type
             )
         result = await self.session.execute(stmt)
         return result.scalars().all()
+
+    async def delte_by_id(self, id: int):
+        ses = self.session
+        db_config: m_search.SearchURLConfig = await ses.get(
+            m_search.SearchURLConfig, id
+        )
+        if not db_config:
+            raise ValueError(f"not found config.id ,{id}")
+        await ses.delete(db_config)
+        await ses.commit()
+        return

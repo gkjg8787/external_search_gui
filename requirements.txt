@@ -6,3 +6,4 @@ sqlmodel
 jinja2 >=3.1.2,<4.0
 aiosqlite
 structlog
+python-multipart

@@ -1,0 +1,33 @@
+.container { max-width: 800px; margin: auto; padding: 20px; }
+.search-form { margin-bottom: 20px; }
+.label-list { list-style-type: none; padding: 0; }
+.label-item { border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; padding: 15px; }
+.label-header { display: flex; justify-content: space-between; align-items: center; }
+.label-header strong { font-size: 1.2em; }
+.toggle-details-btn {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    border-radius: 3px;
+}
+.label-details { margin-top: 10px; }
+.label-details.collapsed { display: none; }
+.label-details pre { background-color: #f5f5f5; padding: 10px; border-radius: 4px; }
+.label-details code { font-family: monospace; }
+@media (prefers-color-scheme: dark) {
+  /* --- ここから追加/修正 --- */
+
+  /* 1. preタグとcodeタグの背景と文字色を修正 */
+  .label-details pre {
+      background-color: #1e1e1e; /* ダークな背景色 */
+      color: #fff; /* 文字色は白でOK、または薄いグレー #ddd */
+  }
+
+  /* 2. トグルボタンの背景と文字色を修正 */
+  .toggle-details-btn {
+      background-color: #333; /* ダークな背景色 */
+      color: #fff;
+      border-color: #555;
+  }
+}

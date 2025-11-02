@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class SearchURLConfigSchema(BaseModel):
+    id: int | None = None
     label_name: str
     base_url: str
     query: str
