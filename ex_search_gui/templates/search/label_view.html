@@ -5,19 +5,31 @@
     <link rel="stylesheet" href="{{ url_for('static', path='/css/searchlabel.css') }}" type="text/css">
     <title>ラベル一覧</title>
     <style>
+        .page-header {
+            margin-bottom: 10px;
+        }
+        .menu-container {
+            margin-bottom: 20px;
+        }
         .label-actions {
             margin-left: auto;
             display: flex;
             gap: 10px;
+            align-items: center;
         }
-        .label-actions .btn-edit, .label-actions .btn-delete {
+        .btn, .label-actions .btn-edit, .label-actions .btn-delete, .label-actions .btn-config {
             padding: 5px 10px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             color: white;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
         }
+        .btn-add { background-color: #28a745; padding: 8px 15px; }
         .btn-edit { background-color: #17a2b8; }
+        .btn-config { background-color: #ffc107; color: #212529; }
         .btn-delete { background-color: #dc3545; }
     </style>
 {% endblock %}
@@ -25,7 +37,12 @@
 {% block body %}
 
 <div class="container">
-    <h1>ラベル一覧</h1>
+    <div class="page-header">
+        <h1>ラベル一覧</h1>
+    </div>
+    <div class="menu-container">
+        <a href="{{ url_for('read_labels_add') }}" class="btn btn-add">新規追加</a>
+    </div>
 
     <div class="search-form">
         <form method="get" action="{{ url_for('read_labels') }}">
@@ -44,8 +61,10 @@
                         {% if labels|length >= 5 %}
                         <button class="toggle-details-btn" onclick="toggleDetails(this)">詳細</button>
                         {% endif %}
-                        {# 編集ページは未実装のため、URLは仮置き #}
-                        <a href="#" class="btn-edit">編集</a>
+                        <a href="{{ url_for('read_label_display_config', label_id=item.id) }}" class="btn btn-config">表示設定</a>
+                        <form method="post" action="{{ url_for('edit_label', label_id=item.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-edit">編集</button>
+                        </form>
                         <button class="btn-delete" onclick="deleteLabel(this, {{ item.id }}, '{{ item.label_name }}')">
                             削除
                         </button>
