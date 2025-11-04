@@ -404,7 +404,8 @@
         delete requestData.target_urls;
         delete requestData.keywords;
 
-        const url = isEditMode ? `/api/labels/${requestData.id}/` : "{{ url_for('post_labels') }}";
+        const url_update_template = "{{ url_for('update_label', id='__LABEL_ID__') }}";
+        const url = isEditMode ?  url_update_template.replace('__LABEL_ID__', requestData.id) : "{{ url_for('post_labels') }}";
         const method = isEditMode ? 'PUT' : 'POST';
         const successMessage = isEditMode ? 'ラベルを更新しました。一覧ページに移動します...' : 'ラベルを登録しました。一覧ページに移動します...';
         const errorMessageBase = isEditMode ? '更新' : '登録';
