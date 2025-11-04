@@ -84,6 +84,37 @@ async def post_labels(
     return SearchURLConfigResponse(success=True)
 
 
+@router.put("/labels/{id}/", response_model=SearchURLConfigResponse)
+async def update_label(
+    request: Request,
+    id: int,
+    labelreq: SearchURLConfigRequest,
+    db: AsyncSession = Depends(get_async_session),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api label update called", id=id, labelreq=labelreq)
+
+    # IDが一致していることを確認
+    if labelreq.id != id:
+        raise HTTPException(
+            status_code=400, detail="Path ID does not match request body ID"
+        )
+
+    # SearchURLConfigRequestはidを含んでいるので、そのままモデルに変換できる
+    urlconfig = search_model.SearchURLConfig.model_validate(labelreq)
+
+    try:
+        await urlconfig_repo(db).save_all([urlconfig])
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SearchURLConfigResponse(success=True)
+
+
 @router.post("/labels/preview/", response_model=SearchURLConfigPreviewResponse)
 async def post_labels_preview(
     request: Request,
@@ -115,7 +146,7 @@ async def delete_label(
     log = structlog.get_logger(__name__)
     log.info("api label delete called", id=id)
     try:
-        await urlconfig_repo(db).delte_by_id(id)
+        await urlconfig_repo(db).delete_by_id(id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=f"type:{type(e)}, value:{e}")
     return SearchURLConfigResponse(success=True)

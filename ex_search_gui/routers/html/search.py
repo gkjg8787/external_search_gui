@@ -7,10 +7,13 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
+from databases.sql.search.repository import SearchURLConfigRepositorySQL
+from domain.models.search import command as search_command
 
 from databases.sql.util import get_async_session
 from app.label import SearchLabelViewTemplageService
 from domain.schemas.search.search import (
+    SearchResult,
     SearchURLConfigSchema,
     SearchURLConfigPreviewRequest,
 )
@@ -103,7 +106,41 @@ async def read_labels_add_confirm(
         **form_data.model_dump(exclude={"download_config"}),
         download_config=download_config_dict
     )
-    context = SearchLabelPreviewContext(preview=preview).model_dump()
+    context = SearchLabelPreviewContext(
+        preview=preview, is_edit_mode=False
+    ).model_dump()
+
+    return templates.TemplateResponse(
+        request=request, name="search/label_confirm.html", context=context
+    )
+
+
+@router.post("/labels/{label_id}/edit/", response_class=HTMLResponse)
+async def edit_label(
+    request: Request,
+    label_id: int,
+    db: AsyncSession = Depends(get_async_session),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html label edit called", label_id=label_id)
+
+    repo = SearchURLConfigRepositorySQL(db)
+    config = await repo.get_all(search_command.SearchURLConfigCommand(id=label_id))
+    if not config:
+        raise HTTPException(status_code=404, detail="Label not found")
+    if len(config) > 1:
+        raise HTTPException(status_code=500, detail="Multiple labels found")
+    config = config[0]
+
+    # DBモデルをPydanticスキーマに変換
+    preview = SearchURLConfigPreviewRequest.model_validate(config.model_dump())
+
+    context = SearchLabelPreviewContext(preview=preview, is_edit_mode=True).model_dump()
 
     return templates.TemplateResponse(
         request=request, name="search/label_confirm.html", context=context

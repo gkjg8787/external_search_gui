@@ -19,3 +19,4 @@ class SearchLabelAddForm(BaseModel):
 
 class SearchLabelPreviewContext(BaseModel):
     preview: SearchURLConfigPreviewRequest
+    is_edit_mode: bool = False

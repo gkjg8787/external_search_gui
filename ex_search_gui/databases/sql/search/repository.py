@@ -16,27 +16,27 @@ class SearchURLConfigRepositorySQL(search_repo.SearchURLConfigRepository):
 
     async def save_all(self, configs: list[m_search.SearchURLConfig]):
         ses = self.session
+        saved_configs = []
         for config in configs:
             if not config.id:
                 ses.add(config)
-                await ses.flush()
+                saved_configs.append(config)
                 continue
             db_config: m_search.SearchURLConfig = await ses.get(
                 m_search.SearchURLConfig, config.id
             )
             if not db_config:
-                raise ValueError(f"not found config.id ,{db_config.id}")
+                raise ValueError(f"not found config.id ,{config.id}")
             db_config.label_name = config.label_name
             db_config.base_url = config.base_url
             db_config.query = config.query
             db_config.query_encoding = config.query_encoding
             db_config.download_type = config.download_type
             db_config.download_config = config.download_config
-            continue
+            saved_configs.append(db_config)
         await ses.commit()
-        for config in configs:
-            await ses.refresh(config)
-        return
+        for saved_config in saved_configs:
+            await ses.refresh(saved_config)
 
     async def get_all(
         self, command: search_command.SearchURLConfigCommand
@@ -57,7 +57,7 @@ class SearchURLConfigRepositorySQL(search_repo.SearchURLConfigRepository):
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def delte_by_id(self, id: int):
+    async def delete_by_id(self, id: int):
         ses = self.session
         db_config: m_search.SearchURLConfig = await ses.get(
             m_search.SearchURLConfig, id

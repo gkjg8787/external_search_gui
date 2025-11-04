@@ -167,18 +167,28 @@
             padding: 0 10px 10px;
             font-size: 0.8em;
         }
+        #preview-result h4 a {
+            word-break: break-all;
+        }
+
     </style>
 {% endblock %}
 
 {% block body %}
 <div class="container">
-    <h1>ラベル登録確認</h1>
+    <h1>
+        {% if is_edit_mode %}ラベル編集{% else %}ラベル登録確認{% endif %}
+    </h1>
 
     <div id="message-area"></div>
 
     <form id="label-confirm-form">
         <div class="form-container">
             <div class="form-group">
+                {% if is_edit_mode %}
+                {# 編集モードの場合、更新対象のIDを保持 #}
+                <input type="hidden" id="id" name="id" value="{{ preview.id }}">
+                {% endif %}
                 <label for="label_name">ラベル名</label>
                 <input type="text" id="label_name" name="label_name" value="{{ preview.label_name }}" required>
             </div>
@@ -223,13 +233,20 @@
 
     <div class="form-actions">
         <div>
-            <a href="{{ url_for('read_labels_add') }}" class="button btn-secondary">戻る</a>
+            {% if is_edit_mode %}
+            <a href="{{ url_for('read_labels') }}" class="button btn-secondary">一覧に戻る</a>
+            {% else %}
+            <a href="{{ url_for('read_labels_add') }}" class="button btn-secondary">入力に戻る</a>
+            {% endif %}
             <a href="{{ url_for('read_labels') }}" class="button btn-info">ラベル一覧</a>
         </div>
         <div>
-            <button id="register-without-preview-btn" type="button" class="button btn-success" onclick="registerLabel()">プレビューせずに登録</button>
+            {% set register_text = '登録' %}
+            {% if is_edit_mode %}{% set register_text = '更新' %}{% endif %}
+
+            <button id="register-btn" type="button" class="button btn-success" onclick="registerLabel()">プレビューせずに{{ register_text }}</button>
             <button id="preview-btn" type="button" class="button btn-primary" onclick="runPreview()">プレビュー（時間がかかります）</button>
-            <button id="register-with-preview-btn" type="button" class="button btn-success" onclick="registerLabel()" style="display: none;">この結果で登録</button>
+            <button id="register-with-preview-btn" type="button" class="button btn-success" onclick="registerLabel()" style="display: none;">この結果で{{ register_text }}</button>
         </div>
     </div>
 
@@ -241,11 +258,12 @@
 
 <script>
     const previewBtn = document.getElementById('preview-btn');
-    const registerWithoutPreviewBtn = document.getElementById('register-without-preview-btn');
+    const registerBtn = document.getElementById('register-btn');
     const registerWithPreviewBtn = document.getElementById('register-with-preview-btn');
     const previewResultArea = document.getElementById('preview-result-area');
     const previewResultDiv = document.getElementById('preview-result');
     const messageArea = document.getElementById('message-area');
+    const isEditMode = {{ is_edit_mode | tojson }};
 
     function getFormData(isForPreview) {
         const form = document.getElementById('label-confirm-form');
@@ -258,7 +276,10 @@
 
         // download_configはJSON文字列からオブジェクトに変換
         try {
-            data.download_config = JSON.parse(data.download_config);
+            // 空文字列の場合はパースしない
+            if (data.download_config && data.download_config.trim()) {
+                data.download_config = JSON.parse(data.download_config);
+            }
         } catch (e) {
             console.error("Invalid JSON in download_config:", e);
             data.download_config = {};
@@ -304,7 +325,7 @@
             html += '<div class="preview-cards-container">';
             for (const item of searchResults.results) {
                 const title = item.title || 'タイトルなし';
-                const condition = item.condition ? ` (${item.condition})` : '';
+                const condition = item.condition ? ` ${item.condition}` : '';
                 const price = item.price ? `${item.price.toLocaleString()}円` : '';
                 const taxin = item.taxin ? ' (税込)' : '';
                 const stockMsg = item.stock_msg || '';
@@ -320,7 +341,8 @@
                             </div>
                         </a>
                         <div class="card-info">
-                            <div class="card-title">${title}${condition}</div>
+                            <div class="card-title">${title}</div>
+                            <div>${condition}</div>
                             <div>${price}${taxin}</div>
                             <div>${stockMsg}</div>
                         </div>
@@ -373,7 +395,7 @@
     }
 
     async function registerLabel() {
-        const buttons = [previewBtn, registerWithoutPreviewBtn, registerWithPreviewBtn];
+        const buttons = [previewBtn, registerBtn, registerWithPreviewBtn].filter(Boolean);
         buttons.forEach(btn => btn.disabled = true);
 
         const requestData = getFormData(false);
@@ -382,24 +404,34 @@
         delete requestData.target_urls;
         delete requestData.keywords;
 
+        const url = isEditMode ? `/api/labels/${requestData.id}/` : "{{ url_for('post_labels') }}";
+        const method = isEditMode ? 'PUT' : 'POST';
+        const successMessage = isEditMode ? 'ラベルを更新しました。一覧ページに移動します...' : 'ラベルを登録しました。一覧ページに移動します...';
+        const errorMessageBase = isEditMode ? '更新' : '登録';
+
         try {
-            const response = await fetch("{{ url_for('post_labels') }}", {
-                method: 'POST',
+            const response = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestData)
             });
 
             const result = await response.json();
 
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || '登録に失敗しました。');
+            if (!response.ok) {
+                // FastAPIのHTTPExceptionからのエラーメッセージを取得
+                const detail = result.detail || JSON.stringify(result);
+                throw new Error(`${errorMessageBase}に失敗しました: ${detail}`);
+            }
+            if (!result.success) {
+                throw new Error(result.message || `${errorMessageBase}に失敗しました。`);
             }
 
-            showMessage('ラベルを登録しました。一覧ページに移動します...', 'success');
+            showMessage(successMessage, 'success');
             window.scrollTo(0, 0);
             // 2秒後にラベル一覧ページにリダイレクト
             setTimeout(() => {
-                window.location.href = "{{ url_for('read_labels') }}";
+                window.location.href = "{{ url_for('read_labels') }}"; // 常に一覧へ
             }, 2000);
 
         } catch (error) {

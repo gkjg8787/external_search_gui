@@ -61,8 +61,9 @@
                         {% if labels|length >= 5 %}
                         <button class="toggle-details-btn" onclick="toggleDetails(this)">詳細</button>
                         {% endif %}
-                        {# 編集ページは未実装のため、URLは仮置き #}
-                        <a href="#" class="btn-edit">編集</a>
+                        <form method="post" action="{{ url_for('edit_label', label_id=item.id) }}" style="display: inline;">
+                            <button type="submit" class="btn-edit">編集</button>
+                        </form>
                         <button class="btn-delete" onclick="deleteLabel(this, {{ item.id }}, '{{ item.label_name }}')">
                             削除
                         </button>
