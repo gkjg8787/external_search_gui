@@ -25,6 +25,24 @@ templates = Jinja2Templates(directory="templates")
 CALLER_TYPE = "html.search"
 
 
+@router.get("/", response_class=HTMLResponse)
+async def read_search(
+    request: Request,
+    q=Query(default=""),
+    labels: str | None = Query(default=None),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html search called")
+    return templates.TemplateResponse(
+        request=request, name="search/item_search.html", context={}
+    )
+
+
 @router.get("/labels/", response_class=HTMLResponse)
 async def read_labels(
     request: Request,
