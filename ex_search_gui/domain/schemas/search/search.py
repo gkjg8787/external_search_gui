@@ -79,3 +79,12 @@ class SearchResults(BaseModel):
 
 class SearchURLConfigPreviewResponse(BaseModel):
     results: dict[str, SearchResults] = Field(default_factory=dict)
+
+
+class SearchByLabelRequest(BaseModel):
+    keyword: str
+    label_id: int
+
+
+class SearchByLabelResponse(BaseModel):
+    results: dict[int, SearchResults] = Field(default_factory=dict)

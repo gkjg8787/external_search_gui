@@ -28,8 +28,6 @@ CALLER_TYPE = "html.search"
 @router.get("/", response_class=HTMLResponse)
 async def read_search(
     request: Request,
-    q=Query(default=""),
-    labels: str | None = Query(default=None),
 ):
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(

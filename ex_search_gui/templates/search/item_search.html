@@ -14,7 +14,6 @@
 {% block body %}
     <div class="pagebody">
         <div class="headertitle flex_box">
-            <div><a href="{{ url_for('read_users') }}" class="plain-link">戻る</a></div>
             <div class="title"><a href="{{ url_for('read_search') }}" class="plain-link">サイト検索</a></div>
             <div class="search_inputbox">
                 <form id="search_inputform" action="" method="get" accept-charset="utf-8">
@@ -24,7 +23,6 @@
                         {%- endfor %}
                     </select>
                     <input type="text" name="{{ SEARCH_WORD_NAME }}" value="{{ sword }}">
-                    <input type="hidden" name="{{ PAGE_NAME }}" value="1">
                     <input type="submit" value="検索">
                     <div class="search_cbox_sname">
                         {%- for store in stores %}

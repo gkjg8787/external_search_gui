@@ -6,6 +6,8 @@ from .search import (
     SearchResult,
     SearchResults,
     SearchURLConfigPreviewResponse,
+    SearchByLabelRequest,
+    SearchByLabelResponse,
 )
 
 __all__ = [
@@ -16,4 +18,6 @@ __all__ = [
     "SearchResult",
     "SearchResults",
     "SearchURLConfigPreviewResponse",
+    "SearchByLabelRequest",
+    "SearchByLabelResponse",
 ]

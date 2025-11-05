@@ -12,6 +12,8 @@ from domain.schemas.search import (
     SearchURLConfigResponse,
     SearchURLConfigPreviewRequest,
     SearchURLConfigPreviewResponse,
+    SearchByLabelRequest,
+    SearchByLabelResponse,
 )
 from databases.sql.search.repository import (
     SearchURLConfigRepositorySQL as urlconfig_repo,
@@ -20,8 +22,6 @@ from app.search.search_api import search_via_api_for_preview
 from app.label.add import SearchLabelDownLoadConfigTemplateService
 
 router = APIRouter(prefix="/api", tags=["api"])
-
-CALLER_TYPE = "api.search"
 
 
 @router.get("/labels/", response_model=list[SearchLabelResponse])
@@ -177,3 +177,42 @@ async def get_label_config_template(
         )
 
     return config_template.model_dump()
+
+
+@router.post("/labels/search/", response_model=SearchByLabelResponse)
+async def search_by_label(
+    request: Request,
+    searchreq: SearchByLabelRequest,
+    db: AsyncSession = Depends(get_async_session),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api search by labels called", searchreq=searchreq)
+    db_labels = await urlconfig_repo(db).get_all(
+        command=search_command.SearchURLConfigCommand(id=searchreq.label_id)
+    )
+    if not db_labels:
+        raise HTTPException(status_code=404, detail="Label not found")
+    if len(db_labels) > 1:
+        raise HTTPException(
+            status_code=500, detail="Multiple labels found with the same ID"
+        )
+    db_label = db_labels[0]
+    preview_request = SearchURLConfigPreviewRequest(
+        id=db_label.id,
+        label_name=db_label.label_name,
+        base_url=db_label.base_url,
+        query=db_label.query,
+        query_encoding=db_label.query_encoding,
+        download_type=db_label.download_type,
+        download_config=db_label.download_config,
+        keywords=[searchreq.keyword],
+    )
+    response = await search_via_api_for_preview(ses=db, searchreq=preview_request)
+    if len(response.results) == 0:
+        return SearchByLabelResponse(results={})
+    return SearchByLabelResponse(results={searchreq.label_id: response.results[0]})
