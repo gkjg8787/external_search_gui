@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <title>ラベル検索</title>
+    <style>
+        .search-container {
+            margin-bottom: 20px;
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .search-box input[type="text"] {
+            flex-grow: 1;
+            padding: 8px;
+        }
+        .search-box button {
+            padding: 8px 15px;
+        }
+        .labels-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .label-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .results-container {
+            margin-top: 20px;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 検索結果カードのスタイル (label_confirm.htmlから流用・調整) */
+        .result-cards-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .result-card {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            width: 220px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+        }
+        .result-card a {
+            text-decoration: none;
+            color: inherit;
+        }
+        .card-image-container {
+            position: relative;
+            width: 100%;
+            padding-top: 100%; /* 1:1 アスペクト比 */
+        }
+        .card-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background-color: #f0f0f0;
+        }
+        .card-sitename {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+        .card-info {
+            padding: 10px;
+            font-size: 0.9em;
+            flex-grow: 1;
+        }
+        .card-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .card-sub-urls {
+            padding: 0 10px 10px;
+            font-size: 0.8em;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .result-card { background-color: #2d2d2d; border-color: #555; }
+            .labels-container { border-color: #555; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>ラベル検索</h1>
+
+    <div class="search-container">
+        <div class="search-box">
+            <input type="text" id="search-keyword" placeholder="検索キーワードを入力">
+            <button id="search-button">検索</button>
+        </div>
+        <div id="labels-container" class="labels-container">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <div id="results-container" class="results-container">
+        <!-- 検索結果がここに表示されます -->
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const labelsContainer = document.getElementById('labels-container');
+    const searchButton = document.getElementById('search-button');
+    const searchKeywordInput = document.getElementById('search-keyword');
+    const resultsContainer = document.getElementById('results-container');
+
+    // 1. ラベル一覧を非同期で読み込む
+    try {
+        const response = await fetch("{{ url_for('get_labels') }}");
+        if (!response.ok) throw new Error('ラベルの読み込みに失敗しました。');
+        const labels = await response.json();
+
+        labelsContainer.innerHTML = ''; // スピナーを消去
+        if (labels.length > 0) {
+            labels.forEach(label => {
+                const labelEl = document.createElement('div');
+                labelEl.className = 'label-item';
+                labelEl.innerHTML = `
+                    <input type="checkbox" id="label-${label.id}" name="label_ids" value="${label.id}">
+                    <label for="label-${label.id}">${label.label_name}</label>
+                `;
+                labelsContainer.appendChild(labelEl);
+            });
+        } else {
+            labelsContainer.textContent = '登録されているラベルがありません。';
+        }
+    } catch (error) {
+        labelsContainer.innerHTML = `<p style="color: red;">${error.message}</p>`;
+    }
+
+    // 2. 検索ボタンのクリックイベント
+    searchButton.addEventListener('click', () => {
+        const keyword = searchKeywordInput.value.trim();
+        if (!keyword) {
+            alert('検索キーワードを入力してください。');
+            return;
+        }
+
+        const checkedLabels = document.querySelectorAll('input[name="label_ids"]:checked');
+        if (checkedLabels.length === 0) {
+            alert('検索対象のラベルを1つ以上選択してください。');
+            return;
+        }
+
+        resultsContainer.innerHTML = ''; // 前回の結果をクリア
+
+        checkedLabels.forEach(checkbox => {
+            const labelId = parseInt(checkbox.value, 10);
+            // ラベル名を取得
+            const labelElement = document.querySelector(`label[for="label-${labelId}"]`);
+            const labelName = labelElement ? labelElement.textContent : `ID: ${labelId}`;
+            performSearch(labelId, keyword, labelName);
+        });
+    });
+
+    // 3. ラベル毎に検索を実行する関数
+    async function performSearch(labelId, keyword, labelName) {
+        const resultWrapper = document.createElement('div');
+        resultWrapper.id = `result-label-${labelId}`;
+        resultWrapper.innerHTML = `<h3>検索中... (${labelName})</h3><div class="spinner"></div>`;
+        resultsContainer.appendChild(resultWrapper);
+
+        try {
+            const response = await fetch("{{ url_for('search_by_label') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label_id: labelId, keyword: keyword })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || '検索に失敗しました。');
+            }
+
+            const data = await response.json();
+            const searchResults = data.results[labelId];
+            resultWrapper.innerHTML = createResultCards(searchResults, labelName);
+
+        } catch (error) {
+            resultWrapper.innerHTML = `<h3>検索エラー (${labelName})</h3><p style="color: red;">${error.message}</p>`;
+        }
+    }
+
+    // 4. 検索結果からカードHTMLを生成する関数
+    function createResultCards(searchResults, titlePrefix) {
+        if (!searchResults) {
+            return `<h3>${titlePrefix}</h3><p>結果がありませんでした。</p>`;
+        }
+        if (searchResults.error_msg) {
+            return `<h3>${titlePrefix}</h3><p><strong style="color: red;">エラー:</strong> ${searchResults.error_msg}</p>`;
+        }
+        if (!searchResults.results || searchResults.results.length === 0) {
+            return `<h3>${titlePrefix}</h3><p>取得データなし</p>`;
+        }
+
+        let html = `<h3>${titlePrefix}</h3><div class="result-cards-container">`;
+        for (const item of searchResults.results) {
+            const title = item.title || 'タイトルなし';
+            const condition = item.condition ? ` ${item.condition}` : '';
+            const price = item.price ? `${item.price.toLocaleString()}円` : '';
+            const taxin = item.taxin ? ' (税込)' : '';
+            const imageUrl = item.image_url || '';
+            const itemUrl = item.url || '#';
+
+            html += `
+                <div class="result-card">
+                    <a href="${itemUrl}" target="_blank" rel="noopener noreferrer">
+                        <div class="card-image-container">
+                            <img src="${imageUrl}" alt="${title}" class="card-image" loading="lazy">
+                            ${item.sitename ? `<span class="card-sitename">${item.sitename}</span>` : ''}
+                        </div>
+                    </a>
+                    <div class="card-info">
+                        <div class="card-title">${title}</div>
+                        <div>${condition}</div>
+                        <div>${price}${taxin}</div>
+                    </div>
+                    ${item.sub_urls && item.sub_urls.length > 0 ? `
+                    <div class="card-sub-urls">
+                        ${item.sub_urls.map(subUrl => `<a href="${subUrl}" target="_blank" rel="noopener noreferrer">サブリンク</a>`).join(' ')}
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        html += '</div>';
+        return html;
+    }
+});
+</script>
+{% endblock %}

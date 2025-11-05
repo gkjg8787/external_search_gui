@@ -36,9 +36,8 @@ async def read_search(
     )
     log = structlog.get_logger(__name__)
     log.info("html search called")
-    return templates.TemplateResponse(
-        request=request, name="search/item_search.html", context={}
-    )
+    # 新しいテンプレートを返すように変更
+    return templates.TemplateResponse(request=request, name="search/label_search.html")
 
 
 @router.get("/labels/", response_class=HTMLResponse)

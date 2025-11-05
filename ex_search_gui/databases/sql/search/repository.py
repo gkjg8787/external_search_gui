@@ -42,6 +42,8 @@ class SearchURLConfigRepositorySQL(search_repo.SearchURLConfigRepository):
         self, command: search_command.SearchURLConfigCommand
     ) -> list[m_search.SearchURLConfig]:
         stmt = select(m_search.SearchURLConfig)
+        if command.id:
+            stmt = stmt.where(m_search.SearchURLConfig.id == command.id)
         if command.label_name:
             stmt = stmt.where(
                 m_search.SearchURLConfig.label_name.icontains(command.label_name)

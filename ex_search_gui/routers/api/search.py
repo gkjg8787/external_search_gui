@@ -43,6 +43,7 @@ async def get_labels(
     if db_labels:
         labels = [
             SearchLabelResponse(
+                id=db_label.id,
                 label_name=db_label.label_name,
                 base_url=db_label.base_url,
                 query=db_label.query,
@@ -215,4 +216,6 @@ async def search_by_label(
     response = await search_via_api_for_preview(ses=db, searchreq=preview_request)
     if len(response.results) == 0:
         return SearchByLabelResponse(results={})
-    return SearchByLabelResponse(results={searchreq.label_id: response.results[0]})
+    # response.resultsはURLをキーとする辞書なので、最初の値を取得する
+    first_result = list(response.results.values())[0]
+    return SearchByLabelResponse(results={searchreq.label_id: first_result})

@@ -329,7 +329,7 @@
                 const price = item.price ? `${item.price.toLocaleString()}円` : '';
                 const taxin = item.taxin ? ' (税込)' : '';
                 const stockMsg = item.stock_msg || '';
-                const imageUrl = item.image_url || 'https://via.placeholder.com/220'; // ダミー画像
+                const imageUrl = item.image_url || ''; // ダミー画像
                 const itemUrl = item.url || '#';
 
                 html += `
