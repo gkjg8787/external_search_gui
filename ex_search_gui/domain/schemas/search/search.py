@@ -26,7 +26,7 @@ class SearchURLConfigSchema(BaseModel):
     def validate_base_url(cls, v: str) -> str:
         parsed_url = urlparse(v)
         if not parsed_url.netloc or parsed_url.scheme not in ["http", "https"]:
-            ValueError(f"Invalid base_url: {v}")
+            raise ValueError(f"Invalid base_url: {v}")
         return v
 
 

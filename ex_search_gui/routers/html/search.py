@@ -115,7 +115,15 @@ async def read_labels_add_confirm(
         cleaned_json_str = re.sub(pattern, r"\1", form_data.download_config)
         download_config_dict = json.loads(cleaned_json_str)
     except json.JSONDecodeError:
+        log.warning(
+            "Invalid JSON in download_config", download_config=form_data.download_config
+        )
         download_config_dict = {}
+    if not download_config_dict:
+        download_config_dict = {
+            "sitename": "example_sitename",
+            "label": "example_label",
+        }
 
     preview = SearchURLConfigPreviewRequest(
         **form_data.model_dump(exclude={"download_config"}),

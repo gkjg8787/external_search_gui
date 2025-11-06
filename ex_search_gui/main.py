@@ -29,8 +29,7 @@ app.include_router(html_search.router)
 
 @app.get("/")
 async def root(request: Request):
-    return None
-    # return RedirectResponse(
-    #    url=request.url_for("read_admin_noticeloglist"),
-    #    status_code=status.HTTP_302_FOUND,
-    # )
+    return RedirectResponse(
+        url=request.url_for("read_search"),
+        status_code=status.HTTP_302_FOUND,
+    )

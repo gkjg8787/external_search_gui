@@ -198,15 +198,15 @@
             </div>
             <div class="form-group">
                 <label for="query">クエリ</label>
-                <input type="text" id="query" name="query" value="{{ preview.query }}">
+                <input type="text" id="query" name="query" value="{{ preview.query }}" required>
             </div>
             <div class="form-group">
                 <label for="query_encoding">クエリエンコーディング</label>
-                <input type="text" id="query_encoding" name="query_encoding" value="{{ preview.query_encoding }}">
+                <input type="text" id="query_encoding" name="query_encoding" value="{{ preview.query_encoding }}" required>
             </div>
             <div class="form-group">
                 <label for="download_type">ダウンロードタイプ</label>
-                <input type="text" id="download_type" name="download_type" value="{{ preview.download_type }}" readonly>
+                <input type="text" id="download_type" name="download_type" value="{{ preview.download_type }}">
             </div>
             <div class="form-group">
                 <label for="download_config">ダウンロード設定 (JSON)</label>

@@ -2,7 +2,7 @@
 
 {% block head %}
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
-    <title>ラベル検索</title>
+    <title>ラベルで検索</title>
     <style>
         .search-container {
             margin-bottom: 20px;
@@ -20,6 +20,19 @@
         .search-box button {
             padding: 8px 15px;
         }
+        .menu-container {
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-info { background-color: #17a2b8; }
         .labels-container {
             display: flex;
             flex-wrap: wrap;
@@ -117,6 +130,10 @@
 <div class="container">
     <h1>ラベル検索</h1>
 
+    <div class="menu-container">
+        <a href="{{ url_for('read_labels') }}" class="btn btn-info">ラベル一覧</a>
+    </div>
+
     <div class="search-container">
         <div class="search-box">
             <input type="text" id="search-keyword" placeholder="検索キーワードを入力">
@@ -188,6 +205,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // 検索ボックスでEnterキーが押された時の処理
+    searchKeywordInput.addEventListener('keydown', (event) => {
+        // 日本語入力変換中のEnterキー操作は無視する
+        if (event.key === 'Enter' && !event.isComposing) {
+            searchButton.click();
+        }
+    });
+
     // 3. ラベル毎に検索を実行する関数
     async function performSearch(labelId, keyword, labelName) {
         const resultWrapper = document.createElement('div');
@@ -236,6 +261,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const taxin = item.taxin ? ' (税込)' : '';
             const imageUrl = item.image_url || '';
             const itemUrl = item.url || '#';
+            let origin = '';
+            try {
+                origin = new URL(itemUrl).origin;
+            } catch (e) {
+                console.error("Invalid base_url for creating absolute sub_urls:", itemUrl);
+            }
 
             html += `
                 <div class="result-card">
@@ -252,7 +283,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     ${item.sub_urls && item.sub_urls.length > 0 ? `
                     <div class="card-sub-urls">
-                        ${item.sub_urls.map(subUrl => `<a href="${subUrl}" target="_blank" rel="noopener noreferrer">サブリンク</a>`).join(' ')}
+                            ${item.sub_urls.map(subUrl => {
+                                const finalUrl = (subUrl && subUrl.startsWith('/') && origin) ? `${origin}${subUrl}` : subUrl;
+                                return `<a href="${finalUrl}" target="_blank" rel="noopener noreferrer">サブリンク</a>`;
+                            }).join(' ')}
                     </div>
                     ` : ''}
                 </div>

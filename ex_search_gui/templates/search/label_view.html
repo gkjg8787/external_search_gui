@@ -31,6 +31,7 @@
         .btn-edit { background-color: #17a2b8; }
         .btn-config { background-color: #ffc107; color: #212529; }
         .btn-delete { background-color: #dc3545; }
+        .btn-search { background-color: #007bff; }
     </style>
 {% endblock %}
 
@@ -42,6 +43,7 @@
     </div>
     <div class="menu-container">
         <a href="{{ url_for('read_labels_add') }}" class="btn btn-add">新規追加</a>
+        <a href="{{ url_for('read_search') }}" class="btn btn-search">ラベルで検索</a>
     </div>
 
     <div class="search-form">
