@@ -104,7 +104,9 @@ async function deleteLabel(button, labelId, labelName) {
     }
 
     try {
-        const response = await fetch(`/api/labels/${labelId}/`, {
+        const label_delete_template = "{{ url_for('delete_label', id='__LABEL_ID__') }}";
+        const label_delete_url = label_delete_template.replace('__LABEL_ID__', labelId);
+        const response = await fetch(label_delete_url, {
             method: 'DELETE',
         });
 
