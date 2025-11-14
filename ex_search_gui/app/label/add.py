@@ -7,6 +7,7 @@ from app.gemini.models import (
     Cookie,
     WaitCSSSelector,
     OnError,
+    PromptOptions,
 )
 
 
@@ -23,13 +24,15 @@ class SearchLabelDownLoadConfigTemplateService:
             recreate_parser=False,
             exclude_script=True,
             compress_whitespace=True,
+            prompt=PromptOptions(add_prompt=""),
         )
         match self.option_type:
             case "nodriver":
                 response.nodriver = NodriverOptions(
                     cookie=Cookie(
                         cookie_dict_list=[{"example_cookie": "example_value"}],
-                        return_cookies=False,
+                        save=True,
+                        load=True,
                     ),
                     wait_css_selector=WaitCSSSelector(
                         selector="body",

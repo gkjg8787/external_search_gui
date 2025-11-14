@@ -4,7 +4,8 @@ from typing import Optional, Any, Literal
 
 class Cookie(BaseModel):
     cookie_dict_list: Optional[list[dict[str, Any]]] = None
-    return_cookies: Optional[bool] = False
+    save: Optional[bool] = False
+    load: Optional[bool] = False
 
 
 class OnError(BaseModel):
@@ -34,6 +35,10 @@ class GeminiWaitOptions(BaseModel):
     page_wait_time: float | None = None
 
 
+class PromptOptions(BaseModel):
+    add_prompt: str = ""
+
+
 class AskGeminiOptions(BaseModel, extra="ignore"):
     sitename: str = ""
     label: str = ""
@@ -42,3 +47,4 @@ class AskGeminiOptions(BaseModel, extra="ignore"):
     recreate_parser: bool = False
     exclude_script: bool = True
     compress_whitespace: bool = False
+    prompt: PromptOptions | None = None

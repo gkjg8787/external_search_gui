@@ -177,7 +177,7 @@ async def get_label_config_template(
             status_code=404, detail=f"No template found for option_type: {option_type}"
         )
 
-    return config_template.model_dump()
+    return config_template.model_dump(exclude_none=True)
 
 
 @router.post("/labels/search/", response_model=SearchByLabelResponse)
