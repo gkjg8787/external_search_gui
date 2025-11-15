@@ -76,7 +76,7 @@
                     <p><strong>クエリ:</strong> {{ item.query }}</p>
                     <p><strong>クエリエンコーディング:</strong> {{ item.query_encoding }}</p>
                     <p><strong>ダウンロードタイプ:</strong> {{ item.download_type }}</p>
-                    <p><strong>ダウンロード設定:</strong> <pre><code>{{ item.download_config | tojson(indent=2) }}</code></pre></p>
+                    <p><strong>ダウンロード設定:</strong> <pre><code>{{ item.download_config | tojson_japanese(indent=2) }}</code></pre></p>
                 </div>
             </li>
         {% endfor %}

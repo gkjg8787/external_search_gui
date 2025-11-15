@@ -7,9 +7,9 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
+
 from databases.sql.search.repository import SearchURLConfigRepositorySQL
 from domain.models.search import command as search_command
-
 from databases.sql.util import get_async_session
 from app.label import SearchLabelViewTemplageService
 from domain.schemas.search.search import (
@@ -18,9 +18,10 @@ from domain.schemas.search.search import (
     SearchURLConfigPreviewRequest,
 )
 from domain.schemas.search.html import SearchLabelAddForm, SearchLabelPreviewContext
+from common import read_template
 
 router = APIRouter(prefix="/search", tags=["search"])
-templates = Jinja2Templates(directory="templates")
+templates = read_template.templates
 
 CALLER_TYPE = "html.search"
 
