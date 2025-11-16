@@ -229,6 +229,14 @@
                 <textarea id="keywords" name="keywords">{{ (preview.keywords or []) | join('\n') }}</textarea>
             </div>
         </div>
+
+        <div class="form-container" style="padding-top: 10px; padding-bottom: 10px; margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0;">
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 0;">
+                {# スタイルをインラインで調整 #}
+                <input type="checkbox" id="recreate-parser-off-flag" name="recreate_parser_off_flag" checked style="width: auto; margin-bottom: 0;">
+                <label for="recreate-parser-off-flag" style="margin-bottom: 0; font-weight: normal;">登録時に再作成フラグをOFFにする</label>
+            </div>
+        </div>
     </form>
 
     <div class="form-actions">
@@ -410,6 +418,14 @@
         delete requestData.learning_url;
         delete requestData.target_urls;
         delete requestData.keywords;
+
+        // "登録時に再作成フラグをOFFにする" チェックボックスの処理
+        const recreateParserOffFlag = document.getElementById('recreate-parser-off-flag').checked;
+        if (recreateParserOffFlag && requestData.download_config && requestData.download_config.recreate_parser === true) {
+            console.log("recreate_parser is being set to false.");
+            requestData.download_config.recreate_parser = false;
+        }
+
 
         const url_update_template = "{{ url_for('update_label', id='__LABEL_ID__') }}";
         const url = isEditMode ?  url_update_template.replace('__LABEL_ID__', requestData.id) : "{{ url_for('post_labels') }}";
