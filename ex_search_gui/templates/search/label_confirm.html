@@ -363,6 +363,13 @@
     }
 
     async function runPreview() {
+        const learningUrl = document.getElementById('learning_url').value.trim();
+        if (!learningUrl) {
+            showMessage('プレビューを実行するには学習URLを入力してください。', 'error');
+            window.scrollTo(0, 0);
+            return;
+        }
+
         previewBtn.disabled = true;
         previewBtn.textContent = 'プレビュー実行中...';
         previewResultArea.style.display = 'block';
