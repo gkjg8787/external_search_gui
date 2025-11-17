@@ -4,6 +4,8 @@
 - [external_search](https://github.com/gkjg8787/external_search)を使用してカスタム検索を行うWEBアプリ
 
 ## 起動方法
+- このリポジトリをコピーしたディレクトリ内での実行を前提とする。
+
 - dockerを起動する前にcreate_config.shを実行して必要な設定ファイルを作ります。
   `bash create_config.sh`
 
