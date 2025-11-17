@@ -1,0 +1,33 @@
+services:
+    search_gui:
+        build: ./
+        ports:
+          - "8110:8110"
+        depends_on:
+          - search
+    search:
+        build:
+          context: https://github.com/gkjg8787/external_search.git
+        ports:
+          - "8060:8060"
+        env_file:
+          - ./search/.env
+        volumes:
+          - ./search/settings.py:/app/ex_search/settings.py
+          - ./data/search/db:/app/db
+          - ./data/search/log:/app/log
+        depends_on:
+          - redis
+          - nodriver_api
+    redis:
+        image: redis:latest
+        container_name: redis_broker
+        ports:
+           - "6379:6379"
+    nodriver_api:
+        build:
+            context: https://github.com/gkjg8787/nodriver_api.git
+        init: true
+        ports:
+            - "8090:8090"
+
