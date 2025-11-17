@@ -261,11 +261,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             const taxin = item.taxin ? ' (税込)' : '';
             const imageUrl = item.image_url || '';
             const itemUrl = item.url || '#';
+            let stockMsg = item.stock_msg || '';
+            const is_success = item.is_success || false;
             let origin = '';
             try {
                 origin = new URL(itemUrl).origin;
             } catch (e) {
                 console.error("Invalid base_url for creating absolute sub_urls:", itemUrl);
+            }
+            if (!is_success) {
+                if (!stockMsg) {
+                    stockMsg = '在庫なし';
+                } else if (stockMsg !== '品切れ' && stockMsg !== '在庫なし') {
+                    stockMsg += ' 在庫なし';
+                }
             }
 
             html += `
@@ -280,6 +289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="card-title">${title}</div>
                         <div>${condition}</div>
                         <div>${price}${taxin}</div>
+                        <div>${stockMsg}</div>
                     </div>
                     ${item.sub_urls && item.sub_urls.length > 0 ? `
                     <div class="card-sub-urls">
