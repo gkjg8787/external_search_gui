@@ -88,7 +88,7 @@
 
 <script>
 function toggleDetails(button) {
-    const details = button.parentElement.nextElementSibling;
+    const details = button.closest('.label-header').nextElementSibling;
     if (details.classList.contains('collapsed')) {
         details.classList.remove('collapsed');
         button.textContent = '閉じる';
