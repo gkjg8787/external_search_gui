@@ -1,3 +1,3 @@
-from .read import SearchLabelViewTemplageService
+from .read import SearchLabelViewTemplateService
 
-__all__ = ["SearchLabelViewTemplageService"]
+__all__ = ["SearchLabelViewTemplateService"]

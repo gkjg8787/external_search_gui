@@ -8,6 +8,11 @@ from .search import (
     SearchURLConfigPreviewResponse,
     SearchByLabelRequest,
     SearchByLabelResponse,
+    ProductPageConfigPreviewRequest,
+    ProductPageConfigPreviewResponse,
+    ProductLabelResponse,
+    ProductPageConfigRequest,
+    ProductPageConfigResponse,
 )
 
 __all__ = [
@@ -20,4 +25,9 @@ __all__ = [
     "SearchURLConfigPreviewResponse",
     "SearchByLabelRequest",
     "SearchByLabelResponse",
+    "ProductPageConfigPreviewRequest",
+    "ProductPageConfigPreviewResponse",
+    "ProductLabelResponse",
+    "ProductPageConfigRequest",
+    "ProductPageConfigResponse",
 ]

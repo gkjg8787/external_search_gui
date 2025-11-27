@@ -82,3 +82,52 @@ async def search_via_api_for_preview(
         results_dict[url] = result
 
     return search_schema.SearchURLConfigPreviewResponse(results=results_dict)
+
+
+async def get_product_via_api_for_preview(
+    ses: AsyncSession, productreq: search_schema.ProductPageConfigPreviewRequest
+):
+    results_dict: dict[str, search_schema.SearchResults] = {}
+    target_urls = []
+    no_recreate_config = None
+
+    if (
+        "recreate_parser" in productreq.download_config
+        and productreq.download_config["recreate_parser"] is True
+    ):
+        no_recreate_config = copy.deepcopy(productreq.download_config)
+        no_recreate_config["recreate_parser"] = False
+
+    if productreq.learning_url:
+        target_urls.append(productreq.learning_url)
+
+    if productreq.target_urls:
+        target_urls.extend(productreq.target_urls)
+
+    count = 0
+    for url in target_urls:
+        if results_dict.get(url):
+            continue
+        if no_recreate_config and count > 0:
+            options = no_recreate_config
+        else:
+            options = productreq.download_config
+        searchreq_model = search_model.SearchRequest(
+            url=url,
+            sitename="gemini",
+            options=options,
+        )
+        ok, result = await download_with_api(ses, searchreq_model)
+        count += 1
+        if not ok:
+            if isinstance(result, str):
+                results_dict[url] = search_schema.SearchResults(error_msg=result)
+                continue
+        if not isinstance(result, search_schema.SearchResults):
+            results_dict[url] = search_schema.SearchResults(
+                error_msg=f"type is not SearchResult, type:{type(result)}, value:{result}",
+            )
+            continue
+        results_dict[url] = result
+
+    return search_schema.ProductPageConfigPreviewResponse(results=results_dict)

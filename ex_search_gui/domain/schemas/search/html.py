@@ -1,7 +1,11 @@
 from fastapi import Form
 from pydantic import BaseModel, Field
-from .search import SearchURLConfigSchema, SearchURLConfigPreviewRequest
-from typing import Annotated
+from .search import (
+    SearchURLConfigSchema,
+    SearchURLConfigPreviewRequest,
+    ProductPageConfigPreviewRequest,
+)
+from typing import Annotated, Union
 
 
 class SearchLabels(BaseModel):
@@ -19,4 +23,9 @@ class SearchLabelAddForm(BaseModel):
 
 class SearchLabelPreviewContext(BaseModel):
     preview: SearchURLConfigPreviewRequest
+    is_edit_mode: bool = False
+
+
+class ProductPageLabelPreviewContext(BaseModel):
+    preview: ProductPageConfigPreviewRequest
     is_edit_mode: bool = False

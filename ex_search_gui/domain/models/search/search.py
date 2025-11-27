@@ -43,3 +43,14 @@ class SearchURLConfig(SQLBase, table=True):
         default_factory=dict,
         sa_column=Column(MutableDict.as_mutable(JSONEncodedDictNoEnsureAscii())),
     )
+
+
+class ProductPageConfig(SQLBase, table=True):
+    label_name: str = Field(index=True)
+    url_pattern: str
+    pattern_type: str
+    download_type: str = Field(default="")
+    download_config: dict = Field(
+        default_factory=dict,
+        sa_column=Column(MutableDict.as_mutable(JSONEncodedDictNoEnsureAscii())),
+    )

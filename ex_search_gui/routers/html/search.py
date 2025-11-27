@@ -3,21 +3,28 @@ import json
 import re
 
 from fastapi import APIRouter, Request, Depends, Form, status, HTTPException, Query
-from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
-from databases.sql.search.repository import SearchURLConfigRepositorySQL
+from databases.sql.search.repository import (
+    SearchURLConfigRepositorySQL,
+    ProductPageConfigRepositorySQL,
+)
 from domain.models.search import command as search_command
 from databases.sql.util import get_async_session
-from app.label import SearchLabelViewTemplageService
+from app.label import SearchLabelViewTemplateService
 from domain.schemas.search.search import (
-    SearchResult,
     SearchURLConfigSchema,
     SearchURLConfigPreviewRequest,
+    ProductPageConfig,
+    ProductPageConfigPreviewRequest,
 )
-from domain.schemas.search.html import SearchLabelAddForm, SearchLabelPreviewContext
+from domain.schemas.search.html import (
+    SearchLabelAddForm,
+    SearchLabelPreviewContext,
+    ProductPageLabelPreviewContext,
+)
 from common import read_template
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -54,7 +61,7 @@ async def read_labels(
     )
     log = structlog.get_logger(__name__)
     log.info("html labels called", label=label)
-    service = SearchLabelViewTemplageService(db_session=db, label=label)
+    service = SearchLabelViewTemplateService(db_session=db, label=label)
     labels = await service.execute(label=label)
     context = labels.model_dump() | {"label": label}
     return templates.TemplateResponse(
@@ -168,4 +175,148 @@ async def edit_label(
 
     return templates.TemplateResponse(
         request=request, name="search/label_confirm.html", context=context
+    )
+
+
+@router.get("/labels/product/", response_class=HTMLResponse)
+async def read_product_labels(
+    request: Request,
+    db: AsyncSession = Depends(get_async_session),
+    label: str | None = Query(default=None),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html product labels called", label=label)
+
+    repo = ProductPageConfigRepositorySQL(db)
+    command = search_command.ProductPageConfigCommand(label_name=label)
+    configs = await repo.get_all(command)
+
+    context = {"labels": configs, "label": label}
+    return templates.TemplateResponse(
+        request=request, name="search/product_label_view.html", context=context
+    )
+
+
+@router.get("/labels/product/add/", response_class=HTMLResponse)
+async def read_product_labels_add(
+    request: Request,
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html product labels add called")
+
+    # モデル定義から選択肢を取得
+    pattern_type_options = ProductPageConfig.model_fields[
+        "pattern_type"
+    ].annotation.__args__
+    download_type_options = ProductPageConfig.model_fields[
+        "download_type"
+    ].annotation.__args__
+
+    context = {
+        "pattern_type_options": pattern_type_options,
+        "download_type_options": download_type_options,
+    }
+    return templates.TemplateResponse(
+        request=request, name="search/product_label_add.html", context=context
+    )
+
+
+@router.post("/labels/product/add/confirm/", response_class=HTMLResponse)
+async def read_product_labels_add_confirm(
+    request: Request,
+    label_name: str = Form(...),
+    url_pattern: str = Form(...),
+    pattern_type: str = Form(""),
+    download_type: str = Form(""),
+    download_config: str = Form(""),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+
+    form_data = {
+        "label_name": label_name,
+        "url_pattern": url_pattern,
+        "pattern_type": pattern_type,
+        "download_type": download_type,
+    }
+    log.info("html product labels add confirm called", form_data=form_data)
+
+    try:
+        pattern = r",(\s*[}\]])"
+        cleaned_json_str = re.sub(pattern, r"\1", download_config)
+        download_config_dict = json.loads(cleaned_json_str) if cleaned_json_str else {}
+    except json.JSONDecodeError:
+        log.warning("Invalid JSON in download_config", download_config=download_config)
+        download_config_dict = {}
+
+    if not download_config_dict:
+        download_config_dict = {
+            "sitename": "example_sitename",
+            "label": "example_label",
+        }
+
+    preview = ProductPageConfigPreviewRequest(
+        label_name=label_name,
+        url_pattern=url_pattern,
+        pattern_type=pattern_type,
+        download_type=download_type,
+        download_config=download_config_dict,
+    )
+
+    context = ProductPageLabelPreviewContext(
+        preview=preview, is_edit_mode=False
+    ).model_dump()
+
+    return templates.TemplateResponse(
+        request=request, name="search/product_label_confirm.html", context=context
+    )
+
+
+@router.post("/labels/product/{label_id}/edit/", response_class=HTMLResponse)
+async def edit_product_label(
+    request: Request,
+    label_id: int,
+    db: AsyncSession = Depends(get_async_session),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html product label edit called", label_id=label_id)
+
+    repo = ProductPageConfigRepositorySQL(db)
+    config = await repo.get_all(
+        search_command.ProductPageConfigCommand(label_id=label_id)
+    )
+    if not config:
+        raise HTTPException(status_code=404, detail="Product label not found")
+    if len(config) > 1:
+        raise HTTPException(status_code=500, detail="Multiple Product labels found")
+    config = config[0]
+
+    # DBモデルをPydanticスキーマに変換
+    preview = ProductPageConfigPreviewRequest.model_validate(config.model_dump())
+
+    context = ProductPageLabelPreviewContext(
+        preview=preview, is_edit_mode=False
+    ).model_dump()
+
+    return templates.TemplateResponse(
+        request=request, name="search/product_label_confirm.html", context=context
     )

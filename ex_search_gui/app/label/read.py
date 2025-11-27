@@ -7,7 +7,7 @@ from domain.schemas.search.html import SearchLabels
 from domain.schemas.search.search import SearchURLConfigSchema
 
 
-class SearchLabelViewTemplageService:
+class SearchLabelViewTemplateService:
     def __init__(self, db_session: AsyncSession, label: str | None = None):
         self.db_session = db_session
         self.label = label
@@ -29,4 +29,16 @@ class SearchLabelViewTemplageService:
                 )
                 for db_label in labels
             ]
+        )
+
+
+class ProductPageLabelMatchService:
+    def __init__(self, db_session: AsyncSession, url: str):
+        self.db_session = db_session
+        self.url = url
+
+    async def execute(self):
+        repo = search_repository.ProductPageURLPatternRepositorySQL(self.db_session)
+        return await repo.find_best_match(
+            command=search_command.ProductPageURLPatternCommand(url_pattern=self.url)
         )

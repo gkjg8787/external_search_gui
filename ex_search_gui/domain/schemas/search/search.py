@@ -88,3 +88,33 @@ class SearchByLabelRequest(BaseModel):
 
 class SearchByLabelResponse(BaseModel):
     results: dict[int, SearchResults] = Field(default_factory=dict)
+
+
+class ProductPageConfig(BaseModel):
+    id: int | None = None
+    label_name: str
+    url_pattern: str
+    pattern_type: Literal["", "prefix", "regex"] = Field(default="")
+    download_type: Literal["", "httpx", "selenium", "nodriver"] = Field(default="")
+    download_config: dict = Field(default_factory=dict)
+
+
+class ProductPageConfigPreviewRequest(ProductPageConfig):
+    learning_url: str | None = Field(default=None)
+    target_urls: list[str] = Field(default_factory=list)
+
+
+class ProductPageConfigPreviewResponse(SearchURLConfigPreviewResponse):
+    pass
+
+
+class ProductLabelResponse(ProductPageConfig):
+    pass
+
+
+class ProductPageConfigRequest(ProductPageConfig):
+    pass
+
+
+class ProductPageConfigResponse(BasicResponse):
+    pass

@@ -32,6 +32,7 @@
         .btn-config { background-color: #ffc107; color: #212529; }
         .btn-delete { background-color: #dc3545; }
         .btn-search { background-color: #007bff; }
+        .btn-product-labels { background-color:#6c757d;}
     </style>
 {% endblock %}
 
@@ -44,6 +45,7 @@
     <div class="menu-container">
         <a href="{{ url_for('read_labels_add') }}" class="btn btn-add">新規追加</a>
         <a href="{{ url_for('read_search') }}" class="btn btn-search">ラベルで検索</a>
+        <a href="{{ url_for('read_product_labels')}}" class="btn btn-product-labels">商品ページラベル一覧</a>
     </div>
 
     <div class="search-form">

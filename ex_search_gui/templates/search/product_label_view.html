@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/searchlabel.css') }}" type="text/css">
+    <title>商品ページラベル一覧</title>
+    <style>
+        .page-header { margin-bottom: 10px; }
+        .menu-container { margin-bottom: 20px; }
+        .label-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+        .btn, .label-actions .btn-edit, .label-actions .btn-delete, .label-actions .btn-config {
+            padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; color: white; text-decoration: none; display: inline-block; text-align: center;
+        }
+        .btn-add { background-color: #28a745; padding: 8px 15px; }
+        .btn-edit { background-color: #17a2b8; }
+        .btn-config { background-color: #ffc107; color: #212529; }
+        .btn-delete { background-color: #dc3545; }
+        .btn-search { background-color: #007bff; }
+        .details { white-space: pre-wrap; font-family: monospace; background:#f8f9fa; padding:8px; border-radius:4px; }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="page-header">
+        <h1>商品ページラベル一覧</h1>
+    </div>
+
+    <div class="menu-container">
+        <a href="{{ url_for('read_product_labels_add') }}" class="btn btn-add">新規追加</a>
+        <a href="{{ url_for('read_labels') }}" class="btn btn-search">検索ラベル一覧へ</a>
+    </div>
+
+    <div class="search-form">
+        <form method="get" action="{{ url_for('read_product_labels') }}">
+            <input type="text" name="label" placeholder="ラベル名で検索" value="{{ label or '' }}">
+            <button type="submit">検索</button>
+        </form>
+    </div>
+
+    {% if labels %}
+        <ul class="label-list">
+        {% for item in labels %}
+            <li class="label-item">
+                <div class="label-header">
+                    <strong>{{ item.label_name }}</strong>
+                    <div class="label-actions">
+                        <form method="post" action="{{ url_for('edit_product_label', label_id=item.id) }}"  style="display:inline-block;">
+                            <button type="submit" class="btn-edit">編集</button>
+                        </form>
+                        <button class="btn-delete" onclick='deleteProductLabel(this, {{ item.id }}, {{ item.label_name|tojson }})'>削除</button>
+                    </div>
+                </div>
+                <div class="label-details">
+                    <p><strong>URLパターン:</strong> {{ item.url_pattern }}</p>
+                    <p><strong>パターンタイプ:</strong> {{ item.pattern_type }}</p>
+                    <p><strong>ダウンロードタイプ:</strong> {{ item.download_type }}</p>
+                    <p><strong>ダウンロード設定:</strong></p>
+                    <div class="details">{{ item.download_config | tojson_japanese(indent=2) }}</div>
+                </div>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>登録されている商品ページラベルはありません。</p>
+    {% endif %}
+</div>
+
+<script>
+async function deleteProductLabel(button, labelId, labelName) {
+    if (!confirm(`ラベル「${labelName}」を本当に削除しますか？`)) return;
+    try {
+        const template = "{{ url_for('delete_product_page_label', id='__LABEL_ID__') }}";
+        const url = template.replace('__LABEL_ID__', labelId);
+        const res = await fetch(url, { method: 'DELETE' });
+        if (!res.ok) {
+            const err = await res.json().catch(()=>({detail:'削除に失敗しました'}));
+            throw new Error(err.detail || '削除に失敗しました');
+        }
+        button.closest('.label-item').remove();
+    } catch (e) {
+        alert(`エラー: ${e.message}`);
+    }
+}
+</script>
+
+{% endblock %}
