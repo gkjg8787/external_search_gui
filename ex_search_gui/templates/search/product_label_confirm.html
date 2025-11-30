@@ -170,6 +170,25 @@
         #preview-result h4 a {
             word-break: break-all;
         }
+        .card-details-toggle {
+            margin-top: 8px;
+            padding: 2px 8px;
+            font-size: 0.8em;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .raw-item-details {
+            display: none;
+            margin-top: 8px;
+            font-size: 0.8em;
+        }
+        .raw-item-details pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+        }
 
     </style>
 {% endblock %}
@@ -353,6 +372,10 @@
                             <div>${condition}</div>
                             <div>${price}${taxin}</div>
                             <div>${stockMsg}</div>
+                            <button type="button" class="card-details-toggle" onclick="toggleItemDetails(this)">詳細</button>
+                            <div class="raw-item-details">
+                                <pre>${JSON.stringify(item, null, 2)}</pre>
+                            </div>
                         </div>
                         ${item.sub_urls && item.sub_urls.length > 0 ? `
                         <div class="card-sub-urls">
@@ -469,6 +492,17 @@
         messageArea.textContent = message;
         messageArea.className = `message-${type}`;
         messageArea.style.display = 'block';
+    }
+
+    function toggleItemDetails(button) {
+        const detailsDiv = button.nextElementSibling;
+        if (detailsDiv.style.display === 'none' || detailsDiv.style.display === '') {
+            detailsDiv.style.display = 'block';
+            button.textContent = '閉じる';
+        } else {
+            detailsDiv.style.display = 'none';
+            button.textContent = '詳細';
+        }
     }
 
 </script>
