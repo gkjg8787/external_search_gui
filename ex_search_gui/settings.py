@@ -21,7 +21,10 @@ API_OPTIONS = {
         "gemini": {"timeout": 300.0},
     },
     "post_data": {
-        "url": "http://localhost:8000/api/",
+        "url": "http://localhost:8120/api/",
         "timeout": 7.0,
+    },
+    "external": {
+        "registration": False,
     },
 }

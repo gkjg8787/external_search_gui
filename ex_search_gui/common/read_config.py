@@ -13,9 +13,14 @@ class APIOtpion(BaseModel):
     gemini: APISiteOption | None = Field(default=None)
 
 
+class ExternalAPIOption(BaseModel):
+    registration: bool = Field(default=False)
+
+
 class APIOptions(BaseModel):
     get_data: APIOtpion
     post_data: APIOtpion
+    external: ExternalAPIOption | None = Field(default=None)
 
 
 class SQLParams(BaseModel):
