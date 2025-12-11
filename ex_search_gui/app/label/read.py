@@ -40,5 +40,5 @@ class ProductPageLabelMatchService:
     async def execute(self):
         repo = search_repository.ProductPageURLPatternRepositorySQL(self.db_session)
         return await repo.find_best_match(
-            command=search_command.ProductPageURLPatternCommand(url_pattern=self.url)
+            command=search_command.ProductPageURLPatternCommand(url=self.url)
         )

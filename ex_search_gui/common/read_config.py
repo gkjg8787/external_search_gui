@@ -13,14 +13,17 @@ class APIOtpion(BaseModel):
     gemini: APISiteOption | None = Field(default=None)
 
 
-class ExternalAPIOption(BaseModel):
-    registration: bool = Field(default=False)
-
-
 class APIOptions(BaseModel):
     get_data: APIOtpion
-    post_data: APIOtpion
-    external: ExternalAPIOption | None = Field(default=None)
+
+
+class SearchToKakakuOption(BaseModel):
+    registration: bool = Field(default=False)
+    url: str
+
+
+class HTMLOptions(BaseModel):
+    search2kakaku: SearchToKakakuOption
 
 
 class SQLParams(BaseModel):
@@ -60,6 +63,11 @@ def to_lower_keys(obj):
 def get_api_options():
     lower_key_dict = to_lower_keys(settings.API_OPTIONS)
     return APIOptions(**lower_key_dict)
+
+
+def get_html_options():
+    lower_key_dict = to_lower_keys(settings.HTML_OPTIONS)
+    return HTMLOptions(**lower_key_dict)
 
 
 def get_databases():

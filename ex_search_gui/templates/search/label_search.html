@@ -152,6 +152,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
     const labelsContainer = document.getElementById('labels-container');
+    const showRegistration = {{ show_registration | tojson | default('false') }};
     const searchButton = document.getElementById('search-button');
     const searchKeywordInput = document.getElementById('search-keyword');
     const resultsContainer = document.getElementById('results-container');
@@ -235,6 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = await response.json();
             const searchResults = data.results[labelId];
             resultWrapper.innerHTML = createResultCards(searchResults, labelName);
+            if (showRegistration) attachWatchHandlers(resultWrapper);
 
         } catch (error) {
             resultWrapper.innerHTML = `<h3>検索エラー (${labelName})</h3><p style="color: red;">${error.message}</p>`;
@@ -295,7 +297,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="card-sub-urls">
                             ${item.sub_urls.map(subUrl => {
                                 const finalUrl = (subUrl && subUrl.startsWith('/') && origin) ? `${origin}${subUrl}` : subUrl;
-                                return `<a href="${finalUrl}" target="_blank" rel="noopener noreferrer">サブリンク</a>`;
+                                const linkHtml = `<a href="${finalUrl}" target="_blank" rel="noopener noreferrer">サブリンク</a>`;
+                                const watchHtml = showRegistration ? ` <button type="button" class="watch-register" data-suburl="${finalUrl}">ウォッチ登録</button>` : '';
+                                return linkHtml + watchHtml;
                             }).join(' ')}
                     </div>
                     ` : ''}
@@ -304,6 +308,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         html += '</div>';
         return html;
+    }
+
+    function attachWatchHandlers(container) {
+        const buttons = container.querySelectorAll('.watch-register');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const suburl = btn.dataset.suburl;
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.action = `{{ url_for('post_product_watch') }}`;
+                form.target = '_blank';
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'subURL';
+                input.value = suburl;
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+                form.remove();
+            });
+        });
     }
 });
 </script>

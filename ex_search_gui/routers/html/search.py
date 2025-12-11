@@ -13,7 +13,9 @@ from databases.sql.search.repository import (
 )
 from domain.models.search import command as search_command
 from databases.sql.util import get_async_session
-from app.label import SearchLabelViewTemplateService
+from app.label import SearchLabelViewTemplateService, ProductPageLabelMatchService
+from app.s2k import utils as s2k_utils
+from common.read_config import get_html_options
 from domain.schemas.search.search import (
     SearchURLConfigSchema,
     SearchURLConfigPreviewRequest,
@@ -45,7 +47,17 @@ async def read_search(
     log = structlog.get_logger(__name__)
     log.info("html search called")
     # 新しいテンプレートを返すように変更
-    return templates.TemplateResponse(request=request, name="search/label_search.html")
+    html_opts = get_html_options()
+    show_registration = False
+    try:
+        show_registration = bool(html_opts.search2kakaku.registration)
+    except Exception:
+        show_registration = False
+    return templates.TemplateResponse(
+        request=request,
+        name="search/label_search.html",
+        context={"show_registration": show_registration},
+    )
 
 
 @router.get("/labels/", response_class=HTMLResponse)
@@ -319,4 +331,42 @@ async def edit_product_label(
 
     return templates.TemplateResponse(
         request=request, name="search/product_label_confirm.html", context=context
+    )
+
+
+# 登録確認ページ (ウォッチ登録) を受け取り表示する
+@router.post("/product/", response_class=HTMLResponse)
+async def post_product_watch(
+    request: Request,
+    subURL: str = Form(...),
+    db: AsyncSession = Depends(get_async_session),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html product watch called", subURL=subURL)
+    db_config = await ProductPageLabelMatchService(db_session=db, url=subURL).execute()
+    log.info("ProductPageLabelMatchService called", db_config=db_config)
+    # モデル定義から選択肢を取得
+    pattern_type_options = ProductPageConfig.model_fields[
+        "pattern_type"
+    ].annotation.__args__
+    download_type_options = ProductPageConfig.model_fields[
+        "download_type"
+    ].annotation.__args__
+
+    context = {
+        "subURL": subURL,
+        "pattern_type_options": pattern_type_options,
+        "download_type_options": download_type_options,
+        "db_config": db_config.model_dump() if db_config else None,
+        "form_action": s2k_utils.get_url_link("url_add"),
+        "form_method": s2k_utils.get_url_method("url_add"),
+    }
+
+    return templates.TemplateResponse(
+        request=request, name="search/product_watch_confirm.html", context=context
     )

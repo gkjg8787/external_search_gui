@@ -19,12 +19,11 @@ API_OPTIONS = {
         "sofmap": {"timeout": 17.0},
         "geo": {"timeout": 18.0},
         "gemini": {"timeout": 300.0},
-    },
-    "post_data": {
-        "url": "http://localhost:8120/api/",
-        "timeout": 7.0,
-    },
-    "external": {
+    }
+}
+HTML_OPTIONS = {
+    "search2kakaku": {
         "registration": False,
-    },
+        "url": "http://localhost:8120/",
+    }
 }

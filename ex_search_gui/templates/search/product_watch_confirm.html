@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <title>ページのウォッチ登録</title>
+    <style>
+        .form-container { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display:block; margin-bottom:5px; font-weight:bold; }
+        .form-group input[type="text"], .form-group select, .form-group textarea { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; }
+        .form-group textarea { height:200px; font-family:monospace; }
+        .form-actions { text-align:right; }
+        .form-actions button { padding:10px 20px; background-color:#007bff; color:white; border:none; border-radius:4px; cursor:pointer; }
+        .form-actions button:hover { background-color:#0056b3; }
+        /* ダークモード対応 */
+        @media (prefers-color-scheme: dark) {
+            .form-container { background-color: #2d2d2d; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+            .form-group label { color: #e0e0e0; }
+            .form-group input[type="text"], .form-group select, .form-group textarea { background-color: #3c3c3c; color: #e0e0e0; border-color: #555; }
+            .form-actions button { background-color: #0056b3; }
+            .btn { background:#6c757d; color:white; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>ページのウォッチ登録</h1>
+
+    <div class="form-container">
+        <form method="{{ form_method }}" action="{{ form_action }}">
+            <div class="form-group">
+                <label for="registered_url">登録URL</label>
+                <input type="text" id="registered_url" value="{{ subURL }}" disabled>
+                <input type="hidden" name="url" value="{{ subURL }}">
+            </div>
+
+            <div class="form-group">
+                <label for="label_name">ラベル名</label>
+                <input type="text" id="label_name" name="label_name" value="{{ db_config.label_name if db_config }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="pattern_type">パターンタイプ</label>
+                <select id="pattern_type" name="pattern_type">
+                    {% for option in pattern_type_options %}
+                    {% if db_config and db_config.pattern_type == option %}
+                    <option value="{{ option }}" selected>{{ option or 'None' }}</option>
+                    {% else %}
+                    <option value="{{ option }}">{{ option or 'None' }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="url_pattern">URLパターン</label>
+                <input type="text" id="url_pattern" name="url_pattern" value="{{ subURL }}">
+            </div>
+
+            <div class="form-group">
+                <label for="download_type">ダウンロードタイプ</label>
+                <select id="download_type" name="download_type" onchange="fetchDownloadConfigTemplate()">
+                    {% for option in download_type_options %}
+                    {% if db_config and db_config.download_type == option %}
+                    <option value="{{ option }}" selected>{{ option or 'None' }}</option>
+                    {% else %}
+                    <option value="{{ option }}">{{ option or 'None' }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="download_config">ダウンロードコンフィグ (JSON)</label>
+                <textarea id="download_config" name="options">{{ (db_config.download_config if db_config else {}) | tojson_japanese(indent=2) }}</textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit">確認</button>
+                <a href="{{ url_for('read_search') }}" class="btn" style="margin-left:8px; background:#6c757d; color:white; padding:8px 12px; border-radius:4px; text-decoration:none;">キャンセル</a>
+            </div>
+
+            <input type="hidden" name="sitename" value="gemini">
+        </form>
+    </div>
+</div>
+
+<script>
+async function fetchDownloadConfigTemplate() {
+    const select = document.getElementById('download_type');
+    const optionType = select.value;
+    const textarea = document.getElementById('download_config');
+
+    if (!optionType) { textarea.value = '{}'; return; }
+
+    const response = await fetch(`{{ url_for('get_label_config_template') }}?option_type=${optionType}`);
+    const data = await response.json();
+    textarea.value = JSON.stringify(data, null, 2);
+}
+</script>
+
+{% endblock %}

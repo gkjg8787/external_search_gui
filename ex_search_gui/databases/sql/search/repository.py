@@ -152,8 +152,10 @@ class ProductPageURLPatternRepositorySQL(search_repo.ProductPageURLPatternReposi
             best_match = max(
                 prefix_pattern_result.scalars(),
                 key=lambda x: len(x.url_pattern),
+                default=None,
             )
-            return best_match
+            if best_match:
+                return best_match
 
         regex_pattern = select(m_search.ProductPageConfig).where(
             m_search.ProductPageConfig.pattern_type == "regex"
