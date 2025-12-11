@@ -1,9 +1,12 @@
 import uuid
 import json
 import re
+from urllib.parse import urlencode, urlparse
 
+from typing import Optional
 from fastapi import APIRouter, Request, Depends, Form, status, HTTPException, Query
 from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
@@ -46,17 +49,29 @@ async def read_search(
     )
     log = structlog.get_logger(__name__)
     log.info("html search called")
-    # 新しいテンプレートを返すように変更
+
+    context = {}
     html_opts = get_html_options()
-    show_registration = False
+
     try:
         show_registration = bool(html_opts.search2kakaku.registration)
     except Exception:
         show_registration = False
+    context["show_registration"] = show_registration
+
+    try:
+        if html_opts.kakakuscraping.enabled:
+            context["kakakuscraping"] = {
+                "url": html_opts.kakakuscraping.url,
+                "enalbled": True,
+            }
+    except Exception:
+        context["kakakuscraping"] = {"enabled": False}
+
     return templates.TemplateResponse(
         request=request,
         name="search/label_search.html",
-        context={"show_registration": show_registration},
+        context=context,
     )
 
 
@@ -363,10 +378,78 @@ async def post_product_watch(
         "pattern_type_options": pattern_type_options,
         "download_type_options": download_type_options,
         "db_config": db_config.model_dump() if db_config else None,
-        "form_action": s2k_utils.get_url_link("url_add"),
-        "form_method": s2k_utils.get_url_method("url_add"),
     }
 
     return templates.TemplateResponse(
         request=request, name="search/product_watch_confirm.html", context=context
+    )
+
+
+@router.post("/product-watch/confirm-label", response_class=HTMLResponse)
+async def confirm_product_label_creation(
+    request: Request,
+    db: AsyncSession = Depends(get_async_session),
+    url: str = Form(...),
+    label_name: str = Form(...),
+    pattern_type: str = Form(...),
+    url_pattern: str = Form(...),
+    download_type: str = Form(...),
+    options: str = Form(...),
+    sitename: str = Form(...),
+):
+    """商品ページラベルの作成を確認するページを表示する"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("confirm product label creation called", label_name=label_name)
+
+    repo = ProductPageConfigRepositorySQL(db)
+    existing_label = await repo.get_all(
+        search_command.ProductPageConfigCommand(label_name=label_name)
+    )
+
+    form_data = {
+        "url": url,
+        "label_name": label_name,
+        "pattern_type": pattern_type,
+        "url_pattern": url_pattern,
+        "download_type": download_type,
+        "options": options,
+        "sitename": sitename,
+    }
+
+    if existing_label:
+        method = s2k_utils.get_url_method("url_add")
+        if method.lower() != "get":
+            raise HTTPException(
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+                detail="Method not allowed for existing label redirection",
+            )
+        # ラベルが既に存在する場合、既存のウォッチ登録処理へリダイレクト
+        log.info("Label already exists. Redirecting to post_product_watch.")
+        base_path = s2k_utils.get_url_link("url_add")
+        query_params = {
+            "url": url,
+            "sitename": sitename,
+            "options": options,
+        }
+        encoded_query = urlencode(query_params)
+        redirect_url = urlparse(base_path)._replace(query=encoded_query).geturl()
+
+        return RedirectResponse(url=redirect_url, status_code=303)
+
+    # ラベルが存在しない場合、作成確認ページを表示
+    log.info("Label does not exist. Showing creation confirmation page.")
+    return templates.TemplateResponse(
+        "search/product_label_creation_confirm.html",
+        {
+            "request": request,
+            "form_data": form_data,
+            "add_label_action": request.url_for("read_product_labels_add_confirm"),
+            "watch_only_action": s2k_utils.get_url_link("url_add"),
+            "watch_only_method": s2k_utils.get_url_method("url_add"),
+        },
     )

@@ -22,8 +22,14 @@ class SearchToKakakuOption(BaseModel):
     url: str
 
 
+class KakakuScrapingOption(BaseModel):
+    enabled: bool = Field(default=False)
+    url: str
+
+
 class HTMLOptions(BaseModel):
     search2kakaku: SearchToKakakuOption
+    kakakuscraping: KakakuScrapingOption
 
 
 class SQLParams(BaseModel):

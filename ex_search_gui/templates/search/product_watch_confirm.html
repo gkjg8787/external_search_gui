@@ -9,9 +9,22 @@
         .form-group label { display:block; margin-bottom:5px; font-weight:bold; }
         .form-group input[type="text"], .form-group select, .form-group textarea { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; }
         .form-group textarea { height:200px; font-family:monospace; }
-        .form-actions { text-align:right; }
+        .form-actions { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+        .form-actions .left-actions { text-align:left; }
+        .form-actions .right-actions { text-align:right; }
         .form-actions button { padding:10px 20px; background-color:#007bff; color:white; border:none; border-radius:4px; cursor:pointer; }
         .form-actions button:hover { background-color:#0056b3; }
+        .btn-cancel { background:#6c757d; color:white; padding:8px 12px; border-radius:4px; border:none; cursor:pointer; }
+        #closeMessage { margin-top:8px; }
+        #closeMessage {
+            display: none;
+            color: red;
+            font-weight: bold;
+            padding: 10px;
+            border: 1px solid red;
+            background-color: #ffeaea;
+            margin-top: 20px;
+        }
         /* ダークモード対応 */
         @media (prefers-color-scheme: dark) {
             .form-container { background-color: #2d2d2d; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
@@ -28,7 +41,7 @@
     <h1>ページのウォッチ登録</h1>
 
     <div class="form-container">
-        <form method="{{ form_method }}" action="{{ form_action }}">
+        <form method="post" action="{{ url_for('confirm_product_label_creation') }}">
             <div class="form-group">
                 <label for="registered_url">登録URL</label>
                 <input type="text" id="registered_url" value="{{ subURL }}" disabled>
@@ -77,8 +90,18 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit">確認</button>
-                <a href="{{ url_for('read_search') }}" class="btn" style="margin-left:8px; background:#6c757d; color:white; padding:8px 12px; border-radius:4px; text-decoration:none;">キャンセル</a>
+                <div class="left-actions">
+                    <button type="submit">登録内容の確認へ</button>
+                </div>
+                <div class="right-actions">
+                    <button type="button" onclick="attemptToClose()" class="btn-cancel">キャンセル</button>
+                    <div id="closeMessage">
+                        <p>
+                            セキュリティ上の制限により、自動でタブを閉じることができませんでした。<br>
+                            **お手数ですが、ブラウザの「閉じる」ボタン、または `Ctrl + W` (Windows/Linux) / `Cmd + W` (Mac) を押して、このタブを手動で閉じてください。**
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <input type="hidden" name="sitename" value="gemini">
@@ -97,6 +120,20 @@ async function fetchDownloadConfigTemplate() {
     const response = await fetch(`{{ url_for('get_label_config_template') }}?option_type=${optionType}`);
     const data = await response.json();
     textarea.value = JSON.stringify(data, null, 2);
+}
+function attemptToClose() {
+    // メッセージを一旦非表示にする (2回目以降のクリック対応)
+    document.getElementById('closeMessage').style.display = 'none';
+
+    // 1. window.close()を実行
+    window.close();
+
+    // 2. 非常に短いタイマーを設定
+    // タブが閉じられれば、このタイマーは実行されない
+    setTimeout(() => {
+        // 3. タイマーが実行された = タブが閉じられなかった
+        document.getElementById('closeMessage').style.display = 'block';
+    }, 50); // 50ミリ秒 (この値は調整可能です)
 }
 </script>
 

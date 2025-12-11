@@ -132,6 +132,9 @@
 
     <div class="menu-container">
         <a href="{{ url_for('read_labels') }}" class="btn btn-info">ラベル一覧</a>
+        {% if kakakuscraping and kakaukscraping.enabled %}
+        <a href="{{ kakakuscraping.url }}" class="btn btn-info">kakakuscrapingへ戻る</a>
+        {% endif %}
     </div>
 
     <div class="search-container">

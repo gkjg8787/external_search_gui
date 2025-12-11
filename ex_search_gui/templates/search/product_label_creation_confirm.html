@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <title>商品ページラベル作成の確認</title>
+    <style>
+        .container { max-width: 800px; margin: 20px auto; padding: 20px; }
+        .confirmation-box { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .confirmation-box h1 { margin-top: 0; }
+        .message { margin-bottom: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; border-radius: 4px; }
+        .actions { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
+        .actions form { display: inline-block; }
+        .actions button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: none;
+            color: white;
+            display: inline-block;
+            text-align: center;
+        }
+        .btn-create-watch { background-color: #28a745; }
+        .btn-create-watch:hover { background-color: #218838; }
+        .btn-watch-only { background-color: #007bff; }
+        .btn-watch-only:hover { background-color: #0056b3; }
+        .btn-cancel { background-color: #6c757d; padding: 10px 20px; font-size: 14px; text-decoration: none; color: white; display: inline-block; border-radius: 4px;}
+        .btn-cancel:hover { background-color: #5a6268; }
+
+        #closeMessage {
+            display: none;
+            color: red;
+            font-weight: bold;
+            padding: 10px;
+            border: 1px solid red;
+            background-color: #ffeaea;
+            margin-top: 20px;
+        }
+        /* ダークモード対応 */
+        @media (prefers-color-scheme: dark) {
+            .confirmation-box { background-color: #2d2d2d; border-color: #444; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+            .message { background-color: #3e3820; border-color: #5a502a; color: #f0e6c2; }
+            .btn-create-watch { background-color: #218838; }
+            .btn-watch-only { background-color: #0056b3; }
+            .btn-cancel { background-color: #5a6268; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="confirmation-box">
+        <h1>商品ページラベル作成の確認</h1>
+        <div class="message">
+            <p>ラベル名「<strong>{{ form_data.label_name }}</strong>」はまだ登録されていません。</p>
+            <p>この設定を新しい商品ページラベルとして保存し、ウォッチ登録しますか？</p>
+        </div>
+
+        <div class="actions">
+            <!-- ラベルを作成してウォッチ登録 -->
+            <form method="post" action="{{ add_label_action }}">
+                <input type="hidden" name="label_name" value="{{ form_data.label_name }}">
+                <input type="hidden" name="url_pattern" value="{{ form_data.url_pattern }}">
+                <input type="hidden" name="pattern_type" value="{{ form_data.pattern_type }}">
+                <input type="hidden" name="download_type" value="{{ form_data.download_type }}">
+                <input type="hidden" name="download_config" value="{{ form_data.options }}">
+                <button type="submit" class="btn-create-watch">ラベルを作成してウォッチ登録</button>
+            </form>
+
+            <!-- ラベルを作成せずにウォッチ登録 -->
+            <form method="{{ watch_only_method }}" action="{{ watch_only_action }}">
+                <input type="hidden" name="url" value="{{ form_data.url }}">
+                <input type="hidden" name="sitename" value="{{ form_data.sitename }}">
+                <input type="hidden" name="options" value="{{ form_data.options }}">
+                <button type="submit" class="btn-watch-only">ラベルを作成せずにウォッチ登録</button>
+            </form>
+        </div>
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="attemptToClose()" class="btn-cancel">キャンセル</button>
+            <div id="closeMessage">
+                <p>
+                    セキュリティ上の制限により、自動でタブを閉じることができませんでした。<br>
+                    **お手数ですが、ブラウザの「閉じる」ボタン、または `Ctrl + W` (Windows/Linux) / `Cmd + W` (Mac) を押して、このタブを手動で閉じてください。**
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function attemptToClose() {
+    // メッセージを一旦非表示にする (2回目以降のクリック対応)
+    document.getElementById('closeMessage').style.display = 'none';
+
+    // 1. window.close()を実行
+    window.close();
+
+    // 2. 非常に短いタイマーを設定
+    // タブが閉じられれば、このタイマーは実行されない
+    setTimeout(() => {
+        // 3. タイマーが実行された = タブが閉じられなかった
+        document.getElementById('closeMessage').style.display = 'block';
+    }, 50); // 50ミリ秒 (この値は調整可能です)
+}
+</script>
+{% endblock %}

@@ -25,5 +25,9 @@ HTML_OPTIONS = {
     "search2kakaku": {
         "registration": False,
         "url": "http://localhost:8120/",
-    }
+    },
+    "kakakuscraping": {
+        "enabled": False,
+        "url": "http://localhost:8000/",
+    },
 }
