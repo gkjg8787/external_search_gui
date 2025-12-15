@@ -7,6 +7,9 @@
         .search-container {
             margin-bottom: 20px;
         }
+        .label-group-container {
+            display:flex;
+        }
         .search-box {
             display: flex;
             gap: 10px;
@@ -138,12 +141,29 @@
     </div>
 
     <div class="search-container">
+        <div class="label-group-container">
+            <form method="get" action="{{ url_for('read_search') }}">
+                <select id="groupSelect" class="form-select" name="group_id" onchange="submit(this.form)">
+                    <option value="">全て</option>
+                    {% for group in groups %}
+                    <option value="{{ group.id }}" {% if group.id == selected_group_id %}selected{% endif %}>
+                        {{ group.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
         <div class="search-box">
             <input type="text" id="search-keyword" placeholder="検索キーワードを入力">
             <button id="search-button">検索</button>
         </div>
         <div id="labels-container" class="labels-container">
-            <div class="spinner"></div>
+            {% for label in labels %}
+            <div class="label-item">
+                <input type="checkbox" id="label-{{ label.id }}" name="label_ids" value="{{ label.id }}" checked>
+                <label for="label-{{label.id}}">{{ label.label_name }}</label>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
@@ -160,29 +180,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchKeywordInput = document.getElementById('search-keyword');
     const resultsContainer = document.getElementById('results-container');
 
-    // 1. ラベル一覧を非同期で読み込む
-    try {
-        const response = await fetch("{{ url_for('get_labels') }}");
-        if (!response.ok) throw new Error('ラベルの読み込みに失敗しました。');
-        const labels = await response.json();
-
-        labelsContainer.innerHTML = ''; // スピナーを消去
-        if (labels.length > 0) {
-            labels.forEach(label => {
-                const labelEl = document.createElement('div');
-                labelEl.className = 'label-item';
-                labelEl.innerHTML = `
-                    <input type="checkbox" id="label-${label.id}" name="label_ids" value="${label.id}">
-                    <label for="label-${label.id}">${label.label_name}</label>
-                `;
-                labelsContainer.appendChild(labelEl);
-            });
-        } else {
-            labelsContainer.textContent = '登録されているラベルがありません。';
-        }
-    } catch (error) {
-        labelsContainer.innerHTML = `<p style="color: red;">${error.message}</p>`;
-    }
 
     // 2. 検索ボタンのクリックイベント
     searchButton.addEventListener('click', () => {

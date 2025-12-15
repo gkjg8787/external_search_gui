@@ -19,10 +19,15 @@ from domain.schemas.search import (
     ProductPageConfigRequest,
     ProductPageConfigResponse,
     ProductLabelResponse,
+    GroupResponse,
+    GroupCreate,
+    GroupUpdate,
+    GeneralSuccessResponse,
 )
 from databases.sql.search.repository import (
     SearchURLConfigRepositorySQL as urlconfig_repo,
     ProductPageConfigRepositorySQL as productconfig_repo,
+    GroupRepository,
 )
 from app.search.search_api import (
     search_via_api_for_preview,
@@ -355,3 +360,195 @@ async def delete_product_page_label(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return ProductPageConfigResponse(success=True)
+
+
+# --- Group CRUD ---
+
+
+@router.get("/groups/", response_model=list[GroupResponse])
+async def get_all_groups(
+    request: Request,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """グループ一覧の取得"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api get all groups called")
+    repo = GroupRepository(db)
+    db_groups = await repo.get_all_groups()
+    if db_groups:
+        groups = [
+            GroupResponse(
+                id=db_group.id,
+                name=db_group.name,
+            )
+            for db_group in db_groups
+        ]
+    else:
+        groups = []
+    return groups
+
+
+@router.get("/groups/{group_id}/labels/", response_model=list[SearchLabelResponse])
+async def get_labels_for_group(
+    request: Request,
+    group_id: int,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """グループ指定から所属するラベル(SearchURLConfig)の一覧の取得"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api get labels for group called", group_id=group_id)
+    repo = GroupRepository(db)
+    db_labels = await repo.get_labels_for_group(group_id)
+    if db_labels:
+        labels = [
+            SearchLabelResponse(
+                id=db_label.id,
+                label_name=db_label.label_name,
+                base_url=db_label.base_url,
+                query=db_label.query,
+                query_encoding=db_label.query_encoding,
+                download_type=db_label.download_type,
+                download_config=db_label.download_config,
+            )
+            for db_label in db_labels
+        ]
+    else:
+        labels = []
+    return labels
+
+
+@router.post("/groups/", response_model=GroupResponse, status_code=201)
+async def create_group(
+    request: Request,
+    group_create: GroupCreate,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """グループの新規作成"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api create group called", group_name=group_create.name)
+    repo = GroupRepository(db)
+    group = search_model.Group(name=group_create.name)
+    db_created_group = await repo.create_group(group)
+    if db_created_group is None:
+        raise HTTPException(status_code=500, detail="Failed to create group")
+    created_group = GroupResponse(
+        id=db_created_group.id,
+        name=db_created_group.name,
+    )
+    return created_group
+
+
+@router.put("/groups/{group_id}/", response_model=GroupResponse)
+async def update_group_name(
+    request: Request,
+    group_id: int,
+    group_update: GroupUpdate,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """グループ名の更新"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info(
+        "api update group name called", group_id=group_id, new_name=group_update.name
+    )
+    repo = GroupRepository(db)
+    db_updated_group = await repo.update_group_name(group_id, group_update.name)
+    if not db_updated_group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    updated_group = GroupResponse(
+        id=db_updated_group.id,
+        name=db_updated_group.name,
+    )
+    return updated_group
+
+
+@router.delete("/groups/{group_id}/", response_model=GeneralSuccessResponse)
+async def delete_group(
+    request: Request,
+    group_id: int,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """グループの削除"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api delete group called", group_id=group_id)
+    repo = GroupRepository(db)
+    success = await repo.delete_group(group_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return GeneralSuccessResponse(success=True)
+
+
+@router.post(
+    "/groups/{group_id}/labels/{label_id}/",
+    response_model=GeneralSuccessResponse,
+    status_code=201,
+)
+async def add_label_to_group(
+    request: Request,
+    group_id: int,
+    label_id: int,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """指定グループに指定ラベル(SearchURLConfig)を所属させる"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api add label to group called", group_id=group_id, label_id=label_id)
+    repo = GroupRepository(db)
+    link = await repo.add_label_to_group(group_id, label_id)
+    if not link:
+        # 既に存在する場合や、親が見つからない場合など。
+        # Repositoryの実装によってはより詳細なエラーハンドリングが必要。
+        raise HTTPException(status_code=400, detail="Could not add label to group")
+    return GeneralSuccessResponse(success=True)
+
+
+@router.delete(
+    "/groups/{group_id}/labels/{label_id}/", response_model=GeneralSuccessResponse
+)
+async def remove_label_from_group(
+    request: Request,
+    group_id: int,
+    label_id: int,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """指定グループから指定ラベル(SearchURLConfig)を外す"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api remove label from group called", group_id=group_id, label_id=label_id)
+    repo = GroupRepository(db)
+    success = await repo.remove_label_from_group(group_id, label_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Link not found")
+    return GeneralSuccessResponse(success=True)

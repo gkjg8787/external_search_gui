@@ -1,11 +1,12 @@
 import json
 
 from sqlmodel import Field, Relationship
-from sqlalchemy import JSON, Column
+from sqlalchemy import Column, event
+from sqlalchemy.orm import Mapper
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy.ext.mutable import MutableDict
 
-from domain.models.base_model import SQLBase
+from domain.models.base_model import SQLBase, SQLModel, datetime, timezone
 
 
 class JSONEncodedDictNoEnsureAscii(TypeDecorator):
@@ -42,6 +43,36 @@ class SearchURLConfig(SQLBase, table=True):
     download_config: dict = Field(
         default_factory=dict,
         sa_column=Column(MutableDict.as_mutable(JSONEncodedDictNoEnsureAscii())),
+    )
+    # Relationships
+    groups_link: list["GroupLabelLink"] = Relationship(back_populates="label")
+
+
+class GroupLabelLink(SQLModel, table=True):
+    """Link Model / 中間テーブル for Group and SearchURLConfig."""
+
+    group_id: int | None = Field(default=None, foreign_key="group.id", primary_key=True)
+    label_id: int | None = Field(
+        default=None, foreign_key="searchurlconfig.id", primary_key=True
+    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Relationships for back-populating
+    group: "Group" = Relationship(back_populates="labels_link")
+    label: "SearchURLConfig" = Relationship(back_populates="groups_link")
+
+    @event.listens_for(Mapper, "before_update")
+    def receive_before_update(mapper, connection, target):
+        target.updated_at = datetime.now(timezone.utc)
+
+
+class Group(SQLBase, table=True):
+    name: str = Field(index=True)
+
+    # Relationships
+    labels_link: list[GroupLabelLink] = Relationship(
+        back_populates="group", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
 

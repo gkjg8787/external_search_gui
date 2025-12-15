@@ -13,6 +13,7 @@ import structlog
 from databases.sql.search.repository import (
     SearchURLConfigRepositorySQL,
     ProductPageConfigRepositorySQL,
+    GroupRepository,
 )
 from domain.models.search import command as search_command
 from databases.sql.util import get_async_session
@@ -41,6 +42,8 @@ CALLER_TYPE = "html.search"
 @router.get("/", response_class=HTMLResponse)
 async def read_search(
     request: Request,
+    db: AsyncSession = Depends(get_async_session),
+    group_id: str = Query(default=""),
 ):
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(
@@ -48,9 +51,27 @@ async def read_search(
         request_id=str(uuid.uuid4()),
     )
     log = structlog.get_logger(__name__)
-    log.info("html search called")
+    log.info("html search called", group_id=group_id)
 
-    context = {}
+    # グループ一覧を取得
+    group_repo = GroupRepository(db)
+    groups = await group_repo.get_all_groups()
+
+    # ラベル一覧を取得
+    labels_repo = SearchURLConfigRepositorySQL(db)
+    try:
+        group_id_int = int(group_id)
+    except ValueError:
+        group_id_int = None
+    if group_id_int:
+        # グループが選択されている場合は、そのグループに所属するラベルを取得
+        labels = await group_repo.get_labels_for_group(group_id_int)
+    else:
+        # グループが選択されていない場合は、すべてのラベルを取得
+        labels = await labels_repo.get_all(search_command.SearchURLConfigCommand())
+
+    context = {"groups": groups, "labels": labels, "selected_group_id": group_id_int}
+
     html_opts = get_html_options()
 
     try:

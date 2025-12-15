@@ -1,7 +1,7 @@
 from typing import Any, Optional, Literal
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class SearchURLConfigSchema(BaseModel):
@@ -118,3 +118,35 @@ class ProductPageConfigRequest(ProductPageConfig):
 
 class ProductPageConfigResponse(BasicResponse):
     pass
+
+
+class ProductLabelResponse(ProductPageConfigRequest):
+    id: int
+    pass
+
+
+# Group related schemas
+class GroupBase(BaseModel):
+    name: str
+
+
+class GroupCreate(GroupBase):
+    pass
+
+
+class GroupUpdate(GroupBase):
+    pass
+
+
+class GroupResponse(GroupBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GroupDetailResponse(GroupResponse):
+    labels: list[SearchURLConfigSchema] = []
+
+
+class GeneralSuccessResponse(BaseModel):
+    success: bool

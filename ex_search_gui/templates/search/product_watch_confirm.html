@@ -68,7 +68,10 @@
 
             <div class="form-group">
                 <label for="url_pattern">URLパターン</label>
-                <input type="text" id="url_pattern" name="url_pattern" value="{{ subURL }}">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="url_pattern" name="url_pattern" value="{{ subURL }}" style="flex-grow: 1;">
+                    <button type="button" onclick="extractUrlPattern()" class="btn-cancel" style="flex-shrink: 0; padding: 8px 12px;">パターン抽出</button>
+                </div>
             </div>
 
             <div class="form-group">
@@ -121,6 +124,36 @@ async function fetchDownloadConfigTemplate() {
     const data = await response.json();
     textarea.value = JSON.stringify(data, null, 2);
 }
+
+function extractUrlPattern() {
+    const urlInput = document.getElementById('url_pattern');
+    let urlStr = urlInput.value;
+
+    // 1. クエリパラメータを削除
+    const queryIndex = urlStr.indexOf('?');
+    if (queryIndex !== -1) {
+        urlStr = urlStr.substring(0, queryIndex);
+    } else {
+        // 2. クエリがない場合、パスの末尾を処理
+        try {
+            const url = new URL(urlStr);
+            let pathname = url.pathname;
+
+            // 末尾のスラッシュを一旦削除して統一
+            if (pathname.endsWith('/')) {
+                pathname = pathname.slice(0, -1);
+            }
+
+            const lastSlashIndex = pathname.lastIndexOf('/');
+            url.pathname = pathname.substring(0, lastSlashIndex + 1); // 末尾にスラッシュを残す
+            urlStr = url.toString();
+        } catch (e) {
+            console.error("URLの解析に失敗しました:", e);
+        }
+    }
+    urlInput.value = urlStr;
+}
+
 function attemptToClose() {
     // メッセージを一旦非表示にする (2回目以降のクリック対応)
     document.getElementById('closeMessage').style.display = 'none';
