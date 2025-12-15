@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <title>新規グループ追加</title>
+    <style>
+        .form-container { max-width: 600px; margin: 20px auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-actions { display: flex; justify-content: space-between; }
+        .btn { padding: 10px 20px; border-radius: 4px; border: none; cursor: pointer; color: white; text-decoration: none; display: inline-block; }
+        .btn-primary { background-color: #007bff; }
+        .btn-secondary { background-color: #6c757d; }
+        #message-area { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; }
+        .message-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        @media (prefers-color-scheme: dark) {
+            .form-container { background-color: #2d2d2d; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+            .form-group label { color: #e0e0e0; }
+            .form-group input[type="text"] { background-color: #3c3c3c; color: #e0e0e0; border-color: #555; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="form-container">
+        <h1>新規グループ追加</h1>
+        <form id="addGroupForm" onsubmit="createGroup(event)">
+            <div class="form-group">
+                <label for="name">グループ名</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">追加</button>
+                <a href="{{ url_for('read_groups') }}" class="btn btn-secondary">一覧に戻る</a>
+            </div>
+        </form>
+        <div id="message-area"></div>
+    </div>
+</div>
+
+<script>
+async function createGroup(event) {
+    event.preventDefault();
+    const form = event.target;
+    const groupName = form.elements.name.value;
+    const messageArea = document.getElementById('message-area');
+
+    messageArea.style.display = 'none';
+    messageArea.className = '';
+
+    try {
+        const response = await fetch("{{ url_for('create_group') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: groupName }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.detail || 'グループの作成に失敗しました。');
+        }
+
+        messageArea.className = 'message-success';
+        const editUrlTemplate = "{{ url_for('edit_group', group_id='__GROUP_ID__') }}";
+        const editUrl = editUrlTemplate.replace('__GROUP_ID__', result.id);
+        messageArea.innerHTML = `グループ「${result.name}」を作成しました。<br><a href="${editUrl}" class="btn btn-primary" style="margin-top:10px;">続けてラベルを追加する</a>`;
+        form.reset();
+
+    } catch (error) {
+        messageArea.className = 'message-error';
+        messageArea.textContent = `エラー: ${error.message}`;
+    }
+    messageArea.style.display = 'block';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <title>グループ編集: {{ group.name }}</title>
+    <style>
+        .container { max-width: 900px; margin: 20px auto; padding: 20px; }
+        .form-section { margin-bottom: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-inline { display: flex; gap: 10px; align-items: center; }
+        .form-inline input[type="text"] { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn { padding: 8px 16px; border-radius: 4px; border: none; cursor: pointer; color: white; text-decoration: none; }
+        .btn-primary { background-color: #007bff; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-danger { background-color: #dc3545; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .section-header h2 { margin: 0; font-size: 1.5em; }
+        .label-list ul { list-style-type: none; padding: 0; margin: 0; }
+        .label-item { padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
+        .label-item-header { display: flex; justify-content: space-between; align-items: center; }
+        .label-details { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; font-size: 0.9em; color: #555; }
+        .toggle-details { cursor: pointer; font-size: 1.2em; user-select: none; }
+        .footer-actions { display: flex; justify-content: space-between; margin-top: 30px; }
+        #message-area { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; text-align: center; }
+        .message-success { background-color: #d4edda; color: #155724; }
+        .message-error { background-color: #f8d7da; color: #721c24; }
+
+        /* Modal styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; }
+        .close-btn { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-body { max-height: 400px; overflow-y: auto; }
+        .modal-body label { display: block; padding: 8px; cursor: pointer; }
+        .modal-body label:hover { background-color: #f1f1f1; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #ddd; padding-top: 20px; margin-top: 20px; }
+
+        @media (prefers-color-scheme: dark) {
+            .form-section { background-color: #2d2d2d; }
+            .form-inline input[type="text"] { background-color: #3c3c3c; color: #e0e0e0; border-color: #555; }
+            .label-item { border-color: #555; }
+            .label-details { border-top-color: #444; color: #bbb; }
+            .modal-content { background-color: #2d2d2d; border-color: #555; }
+            .modal-header, .modal-footer { border-color: #555; }
+            .modal-body label:hover { background-color: #3a3a3a; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>グループ編集</h1>
+    <div id="message-area"></div>
+
+    <div class="form-section">
+        <div class="form-group">
+            <label for="group-name">グループ名</label>
+            <div class="form-inline">
+                <input type="text" id="group-name" value="{{ group.name }}">
+                <button class="btn btn-primary" onclick="updateGroupName()">変更</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="section-header">
+            <h2>所属ラベル一覧</h2>
+            <button class="btn btn-primary" onclick="openAddLabelModal()">ラベルを追加</button>
+        </div>
+        <div class="label-list">
+            <ul id="label-list-ul">
+                <!-- Labels will be loaded here by JavaScript -->
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer-actions">
+        <button class="btn btn-danger" onclick="deleteGroup()">グループを削除</button>
+        <a href="{{ url_for('read_groups') }}" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+</div>
+
+<!-- Add Label Modal -->
+<div id="addLabelModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>ラベルを追加</h2>
+            <span class="close-btn" onclick="closeAddLabelModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="modal-label-list">
+            <!-- Checkbox list of labels will be loaded here -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAddLabelModal()">キャンセル</button>
+            <button class="btn btn-primary" onclick="addSelectedLabels()">追加</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const GROUP_ID = {{ group.id }};
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadGroupLabels();
+    });
+
+    function showMessage(text, isError = false) {
+        const messageArea = document.getElementById('message-area');
+        messageArea.textContent = text;
+        messageArea.className = isError ? 'message-error' : 'message-success';
+        messageArea.style.display = 'block';
+        setTimeout(() => { messageArea.style.display = 'none'; }, 5000);
+    }
+
+    async function updateGroupName() {
+        const newName = document.getElementById('group-name').value;
+        try {
+            const response = await fetch(`{{ url_for('update_group_name', group_id='__GROUP_ID__') }}`.replace('__GROUP_ID__', GROUP_ID), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName })
+            });
+            if (!response.ok) throw new Error('名前の変更に失敗しました。');
+            showMessage('グループ名を更新しました。');
+        } catch (error) {
+            showMessage(error.message, true);
+        }
+    }
+
+    async function loadGroupLabels() {
+        const listUl = document.getElementById('label-list-ul');
+        listUl.innerHTML = '<li>読み込み中...</li>';
+        try {
+            const response = await fetch(`{{ url_for('get_labels_for_group', group_id='__GROUP_ID__') }}`.replace('__GROUP_ID__', GROUP_ID));
+            if (!response.ok) throw new Error('ラベル一覧の取得に失敗しました。');
+            const labels = await response.json();
+            listUl.innerHTML = '';
+            if (labels.length > 0) {
+                labels.forEach(label => listUl.appendChild(createLabelItem(label)));
+            } else {
+                listUl.innerHTML = '<li>所属するラベルはありません。</li>';
+            }
+        } catch (error) {
+            listUl.innerHTML = `<li class="message-error">${error.message}</li>`;
+        }
+    }
+
+    function createLabelItem(label) {
+        const li = document.createElement('li');
+        li.className = 'label-item';
+        li.id = `label-item-${label.id}`;
+        li.innerHTML = `
+            <div class="label-item-header">
+                <span><span class="toggle-details" onclick="toggleDetails(this)">▽</span> ${label.label_name}</span>
+                <button class="btn btn-danger" onclick="removeLabelFromGroup(${label.id})">外す</button>
+            </div>
+            <div class="label-details">
+                <p><strong>Base URL:</strong> ${label.base_url}</p>
+                <p><strong>Query:</strong> ${label.query}</p>
+            </div>
+        `;
+        return li;
+    }
+
+    function toggleDetails(element) {
+        const details = element.closest('.label-item').querySelector('.label-details');
+        if (details.style.display === 'block') {
+            details.style.display = 'none';
+            element.textContent = '▽';
+        } else {
+            details.style.display = 'block';
+            element.textContent = '△';
+        }
+    }
+
+    async function removeLabelFromGroup(labelId) {
+        if (!confirm('このラベルをグループから外しますか？')) return;
+        try {
+            const response = await fetch(`{{ url_for('remove_label_from_group', group_id='__GROUP_ID__', label_id='__LABEL_ID__') }}`.replace('__GROUP_ID__', GROUP_ID).replace('__LABEL_ID__', labelId), {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error('ラベルの削除に失敗しました。');
+            document.getElementById(`label-item-${labelId}`).remove();
+            showMessage('ラベルをグループから外しました。');
+        } catch (error) {
+            showMessage(error.message, true);
+        }
+    }
+
+    async function openAddLabelModal() {
+        const modal = document.getElementById('addLabelModal');
+        const modalBody = document.getElementById('modal-label-list');
+        modalBody.innerHTML = '読み込み中...';
+        modal.style.display = 'block';
+
+        try {
+            const [allLabelsRes, groupLabelsRes] = await Promise.all([
+                fetch("{{ url_for('get_labels') }}"),
+                fetch(`{{ url_for('get_labels_for_group', group_id='__GROUP_ID__') }}`.replace('__GROUP_ID__', GROUP_ID))
+            ]);
+            if (!allLabelsRes.ok || !groupLabelsRes.ok) throw new Error('ラベル情報の取得に失敗しました。');
+            
+            const allLabels = await allLabelsRes.json();
+            const groupLabels = await groupLabelsRes.json();
+            const groupLabelIds = new Set(groupLabels.map(l => l.id));
+
+            modalBody.innerHTML = '';
+            allLabels.forEach(label => {
+                if (!groupLabelIds.has(label.id)) { // まだ所属していないラベルのみ表示
+                    const labelEl = document.createElement('label');
+                    labelEl.innerHTML = `<input type="checkbox" value="${label.id}"> ${label.label_name}`;
+                    modalBody.appendChild(labelEl);
+                }
+            });
+            if (modalBody.children.length === 0) {
+                modalBody.innerHTML = '追加できるラベルがありません。';
+            }
+        } catch (error) {
+            modalBody.innerHTML = `<div class="message-error">${error.message}</div>`;
+        }
+    }
+
+    function closeAddLabelModal() {
+        document.getElementById('addLabelModal').style.display = 'none';
+    }
+
+    async function addSelectedLabels() {
+        const checkboxes = document.querySelectorAll('#modal-label-list input[type="checkbox"]:checked');
+        const labelIdsToAdd = Array.from(checkboxes).map(cb => cb.value);
+
+        if (labelIdsToAdd.length === 0) {
+            showMessage('追加するラベルが選択されていません。', true);
+            return;
+        }
+
+        const requests = labelIdsToAdd.map(labelId => 
+            fetch(`{{ url_for('add_label_to_group', group_id='__GROUP_ID__', label_id='__LABEL_ID__') }}`.replace('__GROUP_ID__', GROUP_ID).replace('__LABEL_ID__', labelId), {
+                method: 'POST'
+            })
+        );
+
+        try {
+            const responses = await Promise.all(requests);
+            const failed = responses.filter(res => !res.ok);
+            if (failed.length > 0) {
+                throw new Error(`${failed.length}件のラベル追加に失敗しました。`);
+            }
+            showMessage(`${labelIdsToAdd.length}件のラベルを追加しました。`);
+            closeAddLabelModal();
+            loadGroupLabels(); // リストを再読み込み
+        } catch (error) {
+            showMessage(error.message, true);
+        }
+    }
+
+    async function deleteGroup() {
+        if (!confirm(`グループ「{{ group.name }}」を本当に削除しますか？\nこの操作は元に戻せません。`)) return;
+
+        try {
+            const response = await fetch(`{{ url_for('delete_group', group_id='__GROUP_ID__') }}`.replace('__GROUP_ID__', GROUP_ID), {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error('グループの削除に失敗しました。');
+            
+            alert('グループを削除しました。一覧ページに戻ります。');
+            window.location.href = "{{ url_for('read_groups') }}";
+        } catch (error) {
+            showMessage(error.message, true);
+        }
+    }
+</script>
+{% endblock %}

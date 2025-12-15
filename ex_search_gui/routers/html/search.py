@@ -474,3 +474,73 @@ async def confirm_product_label_creation(
             "watch_only_method": s2k_utils.get_url_method("url_add"),
         },
     )
+
+
+# --- Group pages: list / add / edit ---
+
+
+@router.get("/groups/", response_class=HTMLResponse)
+async def read_groups(  # グループ一覧
+    request: Request,
+    db: AsyncSession = Depends(get_async_session),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        caller_type=CALLER_TYPE,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html groups called")
+
+    repo = GroupRepository(db)
+    groups = await repo.get_all_groups()
+
+    context = {"groups": groups}
+    return templates.TemplateResponse(
+        request=request, name="search/group_view.html", context=context
+    )
+
+
+@router.get("/groups/add/", response_class=HTMLResponse)
+async def read_groups_add(request: Request):  # グループ追加ページ
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        caller_type=CALLER_TYPE,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html groups add called")
+
+    return templates.TemplateResponse(
+        request=request,
+        name="search/group_add.html",
+        context={},
+    )
+
+
+@router.get("/groups/{group_id}/edit/", response_class=HTMLResponse)
+async def edit_group(  # グループ編集ページ
+    request: Request,
+    group_id: int,
+    db: AsyncSession = Depends(get_async_session),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        caller_type=CALLER_TYPE,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html group edit called", group_id=group_id)
+
+    repo = GroupRepository(db)
+    group = await repo.get_group_by_id(group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    context = {"group": group}
+    return templates.TemplateResponse(
+        request=request, name="search/group_edit.html", context=context
+    )
