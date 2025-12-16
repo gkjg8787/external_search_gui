@@ -69,8 +69,12 @@
             <div class="form-group">
                 <label for="url_pattern">URLパターン</label>
                 <div style="display: flex; gap: 8px; align-items: center;">
+                    {% if db_config and db_config.url_pattern %}
+                    <input type="text" id="url_pattern" name="url_pattern" value="{{ db_config.url_pattern }}" style="flex-grow: 1;">
+                    {% else %}
                     <input type="text" id="url_pattern" name="url_pattern" value="{{ subURL }}" style="flex-grow: 1;">
                     <button type="button" onclick="extractUrlPattern()" class="btn-cancel" style="flex-shrink: 0; padding: 8px 12px;">パターン抽出</button>
+                    {% endif %}
                 </div>
             </div>
 

@@ -283,6 +283,7 @@
     const previewResultDiv = document.getElementById('preview-result');
     const messageArea = document.getElementById('message-area');
     const isEditMode = {{ is_edit_mode | tojson }};
+    const watchUrl = {{ watch_url | tojson | safe }};
 
     function getFormData(isForPreview) {
         const form = document.getElementById('label-confirm-form');
@@ -453,7 +454,6 @@
         const url_update_template = "{{ url_for('update_product_page_label', id='__LABEL_ID__') }}";
         const url = isEditMode ?  url_update_template.replace('__LABEL_ID__', requestData.id) : "{{ url_for('post_product_page_label') }}";
         const method = isEditMode ? 'PUT' : 'POST';
-        const successMessage = isEditMode ? 'ラベルを更新しました。一覧ページに移動します...' : 'ラベルを登録しました。一覧ページに移動します...';
         const errorMessageBase = isEditMode ? '更新' : '登録';
 
         try {
@@ -474,12 +474,37 @@
                 throw new Error(result.message || `${errorMessageBase}に失敗しました。`);
             }
 
-            showMessage(successMessage, 'success');
-            window.scrollTo(0, 0);
-            // 2秒後にラベル一覧ページにリダイレクト
-            setTimeout(() => {
-                window.location.href = "{{ url_for('read_product_labels') }}"; // 常に一覧へ
-            }, 2000);
+            if (!isEditMode && watchUrl) {
+                // 新規登録かつウォッチURLがある場合は、ウォッチ登録画面へPOST
+                const successMessage = 'ラベルを登録しました。ウォッチ登録に移動します。';
+                showMessage(successMessage, 'success');
+                window.scrollTo(0, 0);
+
+                // フォームを作成してPOST
+                setTimeout(() => {
+                    const form = document.createElement('form');
+                    form.method = 'post';
+                    form.action = "{{ url_for('post_product_watch') }}";
+                    
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'subURL';
+                    input.value = watchUrl;
+                    form.appendChild(input);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                }, 2500);
+            } else {
+                // 編集モードまたはウォッチURLがない場合は、一覧ページへリダイレクト
+                const successMessage = isEditMode ? 'ラベルを更新しました。一覧ページに移動します...' : 'ラベルを登録しました。一覧ページに移動します...';
+                showMessage(successMessage, 'success');
+                window.scrollTo(0, 0);
+                // 2秒後にラベル一覧ページにリダイレクト
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('read_product_labels') }}"; // 常に一覧へ
+                }, 2000);
+            }
 
         } catch (error) {
             showMessage(`エラー: ${error.message}`, 'error');

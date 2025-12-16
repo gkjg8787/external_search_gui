@@ -287,6 +287,7 @@ async def read_product_labels_add_confirm(
     pattern_type: str = Form(""),
     download_type: str = Form(""),
     download_config: str = Form(""),
+    watch_url: str = Form(""),
 ):
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(
@@ -326,7 +327,7 @@ async def read_product_labels_add_confirm(
     )
 
     context = ProductPageLabelPreviewContext(
-        preview=preview, is_edit_mode=False
+        preview=preview, is_edit_mode=False, watch_url=watch_url
     ).model_dump()
 
     return templates.TemplateResponse(

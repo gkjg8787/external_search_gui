@@ -29,3 +29,4 @@ class SearchLabelPreviewContext(BaseModel):
 class ProductPageLabelPreviewContext(BaseModel):
     preview: ProductPageConfigPreviewRequest
     is_edit_mode: bool = False
+    watch_url: str = ""
