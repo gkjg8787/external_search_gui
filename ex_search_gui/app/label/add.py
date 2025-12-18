@@ -8,6 +8,7 @@ from app.gemini.models import (
     WaitCSSSelector,
     OnError,
     PromptOptions,
+    HttpxOptions,
 )
 
 
@@ -19,21 +20,29 @@ class SearchLabelDownLoadConfigTemplateService:
 
     async def execute(self):
         response = AskGeminiOptions(
-            sitename="example_site",
-            label="example_label",
+            sitename="sitename",
+            label="labelname",
             recreate_parser=False,
             exclude_script=True,
             compress_whitespace=True,
             prompt=PromptOptions(add_prompt=""),
         )
+        example_cookie = Cookie(
+            cookie_dict_list=[
+                {
+                    "name": "cookie_name",
+                    "value": "cookie_value",
+                    "domain": "www.example.com",
+                    "path": "/",
+                }
+            ],
+            save=True,
+            load=True,
+        )
         match self.option_type:
             case "nodriver":
                 response.nodriver = NodriverOptions(
-                    cookie=Cookie(
-                        cookie_dict_list=[{"example_cookie": "example_value"}],
-                        save=True,
-                        load=True,
-                    ),
+                    cookie=example_cookie,
                     wait_css_selector=WaitCSSSelector(
                         selector="body",
                         timeout=10,
@@ -49,9 +58,12 @@ class SearchLabelDownLoadConfigTemplateService:
                 )
             case "selenium":
                 response.selenium = GeminiWaitOptions(
+                    cookie=example_cookie,
                     wait_css_selector=".example-selector",
                     page_load_timeout=30,
                     tag_wait_timeout=15,
                     page_wait_time=5.0,
                 )
+            case "httpx":
+                response.httpx = HttpxOptions(cookie=example_cookie)
         return response

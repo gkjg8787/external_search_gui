@@ -29,10 +29,15 @@ class NodriverOptions(BaseModel):
 
 
 class GeminiWaitOptions(BaseModel):
+    cookie: Optional[Cookie] = None
     wait_css_selector: str = ""
     page_load_timeout: int | None = None
     tag_wait_timeout: int | None = None
     page_wait_time: float | None = None
+
+
+class HttpxOptions(BaseModel):
+    cookie: Optional[Cookie] = None
 
 
 class PromptOptions(BaseModel):
@@ -44,6 +49,7 @@ class AskGeminiOptions(BaseModel, extra="ignore"):
     label: str = ""
     selenium: GeminiWaitOptions | None = None
     nodriver: NodriverOptions | None = None
+    httpx: HttpxOptions | None = None
     recreate_parser: bool = False
     exclude_script: bool = True
     compress_whitespace: bool = False
