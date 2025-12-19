@@ -35,7 +35,8 @@
             text-decoration: none;
             display: inline-block;
         }
-        .btn-info { background-color: #17a2b8; }
+        .btn-searchlabel { background-color: #17a2b8; }
+        .btn-kakakuscraping { background-color: #6f42c1; }
         .labels-container {
             display: flex;
             flex-wrap: wrap;
@@ -134,9 +135,9 @@
     <h1>ラベルで検索</h1>
 
     <div class="menu-container">
-        <a href="{{ url_for('read_labels') }}" class="btn btn-info">ラベル一覧</a>
+        <a href="{{ url_for('read_labels') }}" class="btn btn-searchlabel">ラベル一覧</a>
         {% if kakakuscraping and kakakuscraping.enabled %}
-        <a href="{{ kakakuscraping.url }}" class="btn btn-info">kakakuscrapingへ戻る</a>
+        <a href="{{ kakakuscraping.url }}" class="btn btn-kakakuscraping">kakakuscrapingへ戻る</a>
         {% endif %}
     </div>
 
