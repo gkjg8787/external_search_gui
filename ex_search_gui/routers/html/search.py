@@ -84,7 +84,7 @@ async def read_search(
         if html_opts.kakakuscraping.enabled:
             context["kakakuscraping"] = {
                 "url": html_opts.kakakuscraping.url,
-                "enalbled": True,
+                "enabled": True,
             }
     except Exception:
         context["kakakuscraping"] = {"enabled": False}
