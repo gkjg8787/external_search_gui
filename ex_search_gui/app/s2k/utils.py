@@ -3,8 +3,8 @@ from urllib.parse import urljoin
 from common.read_config import get_html_options
 
 HTMLLINKCONFIG = {
-    "url": {"root_path" "/url/"},
-    "url_add": {"root_path": "/url/add/", "method": "get"},
+    "url": {"root_path" "url/"},
+    "url_add": {"root_path": "url/add/", "method": "get"},
 }
 
 

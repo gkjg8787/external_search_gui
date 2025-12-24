@@ -451,8 +451,11 @@ async def confirm_product_label_creation(
                 detail="Method not allowed for existing label redirection",
             )
         # ラベルが既に存在する場合、既存のウォッチ登録処理へリダイレクト
-        log.info("Label already exists. Redirecting to post_product_watch.")
         base_path = s2k_utils.get_url_link("url_add")
+        log.info(
+            "Label already exists. Redirecting to post_product_watch.",
+            redirect_base_url=base_path,
+        )
         query_params = {
             "url": url,
             "sitename": sitename,
