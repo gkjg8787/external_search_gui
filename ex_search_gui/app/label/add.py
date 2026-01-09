@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from app.gemini.models import (
     AskGeminiOptions,
-    GeminiWaitOptions,
+    SeleniumWaitOptions,
     NodriverOptions,
     Cookie,
     WaitCSSSelector,
@@ -50,14 +50,14 @@ class SearchLabelDownLoadConfigTemplateService:
                             action_type="retry",
                             max_retries=3,
                             wait_time=2.0,
-                            check_exist_tag=".example-error",
+                            check_exist_tag=".example-selector",
                         ),
                         pre_wait_time=0.0,
                     ),
                     page_wait_time=5.0,
                 )
             case "selenium":
-                response.selenium = GeminiWaitOptions(
+                response.selenium = SeleniumWaitOptions(
                     cookie=example_cookie,
                     wait_css_selector=".example-selector",
                     page_load_timeout=30,

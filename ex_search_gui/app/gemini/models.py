@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Any, Literal
 
 
@@ -22,13 +22,25 @@ class WaitCSSSelector(BaseModel):
     pre_wait_time: Optional[float] = 0.0  # seconds
 
 
+class Wait(BaseModel):
+    time: int = 0  # seconds
+
+
+class Scroll(BaseModel):
+    to_bottom: bool = False
+    amount: Optional[int] = None  # pixels
+    pause_time: Optional[float] = 0.5  # seconds
+
+
 class NodriverOptions(BaseModel):
     cookie: Optional[Cookie] = None
     wait_css_selector: Optional[WaitCSSSelector] = None
     page_wait_time: Optional[float] = None
+    actions: list[Wait | Scroll] = Field(default_factory=list)
+    useragent: dict | None = None
 
 
-class GeminiWaitOptions(BaseModel):
+class SeleniumWaitOptions(BaseModel):
     cookie: Optional[Cookie] = None
     wait_css_selector: str = ""
     page_load_timeout: int | None = None
@@ -47,7 +59,7 @@ class PromptOptions(BaseModel):
 class AskGeminiOptions(BaseModel, extra="ignore"):
     sitename: str = ""
     label: str = ""
-    selenium: GeminiWaitOptions | None = None
+    selenium: SeleniumWaitOptions | None = None
     nodriver: NodriverOptions | None = None
     httpx: HttpxOptions | None = None
     recreate_parser: bool = False
