@@ -1,3 +1,5 @@
+from typing import TypeVar, Type, Tuple, Union, Any
+
 import httpx
 
 from common import read_config
@@ -7,9 +9,16 @@ from .util import create_api_url
 from .models.info import InfoRequest, InfoResponse
 from .models.search import SearchRequest, SearchResponse
 from .models.error import ErrorMsg
+from .models.downloadconfig import (
+    DownloadConfigGenerateRequest,
+    DownloadConfigGenerateResponse,
+)
+
+# ジェネリクス（型変数）を定義
+T = TypeVar("T")
 
 
-async def _get_search_result(apiurlname: APIURLName, data: dict, timeout: float):
+async def _get_api_result(apiurlname: APIURLName, data: dict, timeout: float):
     apiopt = APIPathOptionFactory().create(apiurlname=apiurlname)
     api_url = create_api_url(apiopt=apiopt)
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -28,7 +37,9 @@ async def _get_search_result(apiurlname: APIURLName, data: dict, timeout: float)
     return True, "", res_json
 
 
-async def _convert_to_response_model(data: dict, class_type: type):
+async def _convert_to_response_model(
+    data: dict, class_type: Type[T]
+) -> Union[Tuple[bool, T], Tuple[bool, ErrorMsg], Tuple[bool, str]]:
     try:
         result = class_type(**data)
     except Exception as e:
@@ -48,7 +59,7 @@ async def _get_request_timeout(sitename: str, top_key: str = "get_data") -> floa
 
 
 async def get_search_info(inforeq: InfoRequest):
-    ok, msg, result = await _get_search_result(
+    ok, msg, result = await _get_api_result(
         apiurlname=APIURLName.SEARCH_INFO,
         data=inforeq.model_dump(mode="json"),
         timeout=read_config.get_api_options().get_data.timeout,
@@ -72,7 +83,7 @@ async def get_search_info(inforeq: InfoRequest):
 
 
 async def get_search(searchreq: SearchRequest):
-    ok, msg, result = await _get_search_result(
+    ok, msg, result = await _get_api_result(
         apiurlname=APIURLName.SEARCH,
         data=searchreq.model_dump(mode="json"),
         timeout=await _get_request_timeout(sitename=searchreq.sitename),
@@ -92,4 +103,44 @@ async def get_search(searchreq: SearchRequest):
         return False, convert_result
     if convert_result.error_msg:
         return False, convert_result.error_msg
+    return True, convert_result
+
+
+async def generate_download_config(
+    sitename: str,
+    url: str,
+    search_keyword: str,
+    timeout: float | None = None,
+    optimize: bool = False,
+    init_nodriver_page_wait_time: int | None = None,
+) -> tuple[bool, DownloadConfigGenerateResponse | str]:
+    if not url:
+        return False, "url is required."
+    if not search_keyword:
+        return False, "search_keyword is required."
+    request_data = DownloadConfigGenerateRequest(
+        url=url,
+        search_keyword=search_keyword,
+        timeout=timeout,
+        optimize=optimize,
+        init_nodriver_page_wait_time=init_nodriver_page_wait_time,
+    )
+    ok, msg, result = await _get_api_result(
+        apiurlname=APIURLName.DOWNLOADCONFIG_GENERATE,
+        data=request_data.model_dump(mode="json"),
+        timeout=await _get_request_timeout(sitename=sitename),
+    )
+    if not ok:
+        return ok, msg
+    convert_ok, convert_result = await _convert_to_response_model(
+        data=result, class_type=DownloadConfigGenerateResponse
+    )
+    if not convert_ok:
+        if isinstance(convert_result, str):
+            return False, convert_result
+        if isinstance(convert_result, ErrorMsg):
+            return False, convert_result.detail
+        return False, convert_result
+    if not isinstance(convert_result, DownloadConfigGenerateResponse):
+        return False, convert_result
     return True, convert_result

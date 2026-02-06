@@ -4,7 +4,12 @@ import copy
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.schemas import search as search_schema
-from app.gemini.web_scraper import download_with_api, search_model
+from app.gemini.web_scraper import (
+    download_with_api,
+    search_model,
+    generate_download_config_with_api,
+    downloadconfig_model,
+)
 
 
 async def generate_target_urls(
@@ -131,3 +136,24 @@ async def get_product_via_api_for_preview(
         results_dict[url] = result
 
     return search_schema.ProductPageConfigPreviewResponse(results=results_dict)
+
+
+async def generate_download_config_via_api(
+    ses: AsyncSession, downloadconfigreq: search_schema.DownloadConfigGenerateRequest
+):
+    downloadconfigreq_model = downloadconfig_model.DownloadConfigGenerateRequest(
+        url=downloadconfigreq.url,
+        search_keyword=downloadconfigreq.search_keyword,
+        timeout=downloadconfigreq.timeout,
+        optimize=downloadconfigreq.optimize,
+        init_nodriver_page_wait_time=downloadconfigreq.init_nodriver_page_wait_time,
+    )
+    ok, result = await generate_download_config_with_api(downloadconfigreq_model)
+    if not ok:
+        return ok, result
+    if not isinstance(result, search_schema.DownloadConfigGenerateResponse):
+        return (
+            False,
+            f"type is not DownloadConfigGenerateResponse, type:{type(result)}, value:{result}",
+        )
+    return ok, result

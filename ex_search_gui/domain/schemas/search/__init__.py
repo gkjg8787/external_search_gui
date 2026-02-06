@@ -19,6 +19,8 @@ from .search import (
     GroupResponse,
     GroupDetailResponse,
     GeneralSuccessResponse,
+    DownloadConfigGenerateRequest,
+    DownloadConfigGenerateResponse,
 )
 
 __all__ = [
@@ -42,4 +44,6 @@ __all__ = [
     "GroupResponse",
     "GroupDetailResponse",
     "GeneralSuccessResponse",
+    "DownloadConfigGenerateRequest",
+    "DownloadConfigGenerateResponse",
 ]

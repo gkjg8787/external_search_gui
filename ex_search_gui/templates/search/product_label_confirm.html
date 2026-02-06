@@ -407,6 +407,8 @@
         previewResultArea.style.display = 'block';
         previewResultDiv.innerHTML = '<div class="spinner"></div>';
 
+        document.getElementById('preview-result-area').scrollIntoView({ behavior: 'smooth' });
+
         const requestData = getFormData(true);
 
         try {

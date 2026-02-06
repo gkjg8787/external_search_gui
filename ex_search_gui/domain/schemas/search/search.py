@@ -150,3 +150,16 @@ class GroupDetailResponse(GroupResponse):
 
 class GeneralSuccessResponse(BaseModel):
     success: bool
+
+
+class DownloadConfigGenerateRequest(BaseModel):
+    url: str
+    search_keyword: str
+    timeout: int | None = Field(default=None)
+    optimize: bool = Field(default=False)
+    init_nodriver_page_wait_time: int | None = Field(default=None)
+
+
+class DownloadConfigGenerateResponse(BaseModel):
+    download_config: dict
+    download_type: Literal["", "httpx", "selenium", "nodriver"]

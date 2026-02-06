@@ -23,6 +23,8 @@ from domain.schemas.search import (
     GroupCreate,
     GroupUpdate,
     GeneralSuccessResponse,
+    DownloadConfigGenerateRequest,
+    DownloadConfigGenerateResponse,
 )
 from databases.sql.search.repository import (
     SearchURLConfigRepositorySQL as urlconfig_repo,
@@ -32,6 +34,7 @@ from databases.sql.search.repository import (
 from app.search.search_api import (
     search_via_api_for_preview,
     get_product_via_api_for_preview,
+    generate_download_config_via_api,
 )
 from app.label.add import SearchLabelDownLoadConfigTemplateService
 
@@ -552,3 +555,22 @@ async def remove_label_from_group(
     if not success:
         raise HTTPException(status_code=404, detail="Link not found")
     return GeneralSuccessResponse(success=True)
+
+
+@router.post("/downloadconfig/generate/", response_model=DownloadConfigGenerateResponse)
+async def post_download_config_generate(
+    request: Request,
+    downloadconfigreq: DownloadConfigGenerateRequest,
+    db: AsyncSession = Depends(get_async_session),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api download config generate called", downloadconfigreq=downloadconfigreq)
+    ok, result = await generate_download_config_via_api(db, downloadconfigreq)
+    if not ok:
+        raise HTTPException(status_code=400, detail=result)
+    return result
