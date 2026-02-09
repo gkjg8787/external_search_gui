@@ -77,6 +77,20 @@
         .message-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .message-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
+        /* Modal styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; font-size: 1.2em; }
+        .close-btn { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; cursor: pointer; }
+        .modal-body { margin-bottom: 20px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #ddd; padding-top: 20px; }
+        .modal-body .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .modal-body .form-group input[type="url"],
+        .modal-body .form-group input[type="text"],
+        .modal-body .form-group input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+
         /* ダークモード対応 */
         @media (prefers-color-scheme: dark) {
             .form-container, .preview-container { background-color: #2d2d2d; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
@@ -88,6 +102,13 @@
             }
             .message-success { background-color: #1a3c23; color: #c3e6cb; border-color: #2f663d; }
             .message-error { background-color: #491f22; color: #f5c6cb; border-color: #843534; }
+            .modal-content { background-color: #2d2d2d; border-color: #555; }
+            .modal-header, .modal-footer { border-color: #555; }
+            .close-btn { color: #e0e0e0; }
+            .close-btn:hover, .close-btn:focus { color: #fff; }
+            .modal-body .form-group input[type="url"],
+            .modal-body .form-group input[type="text"],
+            .modal-body .form-group input[type="number"] { background-color: #3c3c3c; color: #e0e0e0; border-color: #555; }
         }
 
         /* プレビュー結果テーブル用のスタイル */
@@ -209,7 +230,10 @@
                 <input type="text" id="download_type" name="download_type" value="{{ preview.download_type }}">
             </div>
             <div class="form-group">
-                <label for="download_config">ダウンロード設定 (JSON)</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <label for="download_config" style="margin-bottom: 0;">ダウンロード設定 (JSON)</label>
+                    <button type="button" class="button btn-info" style="padding: 4px 10px; font-size: 0.85em;" onclick="openAutoGenerateModal()">自動生成</button>
+                </div>
                 <textarea id="download_config" name="download_config">{{ preview.download_config | tojson_japanese(indent=2) }}</textarea>
             </div>
         </div>
@@ -261,6 +285,44 @@
     <div id="preview-result-area" class="preview-container" style="display: none;">
         <h2>プレビュー結果</h2>
         <div id="preview-result"></div>
+    </div>
+
+    <!-- Auto Generate Modal -->
+    <div id="autoGenerateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ダウンロード設定の自動生成</h2>
+                <span class="close-btn" onclick="closeAutoGenerateModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="generate-message-area" style="display:none; margin-bottom: 10px; padding: 10px; border-radius: 4px;"></div>
+                <div class="form-group">
+                    <label for="generate_url">対象URL</label>
+                    <input type="url" id="generate_url" placeholder="https://example.com/..." required>
+                    <p style="font-size: 0.8em; color: #666; margin-top: 4px;">学習URLが入力されている場合は自動的にセットされます。</p>
+                </div>
+                <div class="form-group">
+                    <label for="generate_search_keyword">検索キーワード (必須)</label>
+                    <input type="text" id="generate_search_keyword" placeholder="例: 商品名" required>
+                </div>
+                <div class="form-group">
+                    <label for="generate_timeout">タイムアウト (秒) (任意)</label>
+                    <input type="number" id="generate_timeout" placeholder="例: 30">
+                </div>
+                <div class="form-group">
+                    <label for="generate_init_nodriver_page_wait_time">初期待機時間 (秒) (任意)</label>
+                    <input type="number" id="generate_init_nodriver_page_wait_time" placeholder="例: 5">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="generate_optimize" style="width: auto;">
+                    <label for="generate_optimize" style="margin-bottom: 0; font-weight: normal;">最適化を行う (試験的)</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button btn-secondary" onclick="closeAutoGenerateModal()">キャンセル</button>
+                <button type="button" class="button btn-primary" onclick="runAutoGenerate()">開始</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -481,6 +543,117 @@
         messageArea.className = `message-${type}`;
         messageArea.style.display = 'block';
     }
+    // Auto Generate Modal Functions
+    function openAutoGenerateModal() {
+        const modal = document.getElementById('autoGenerateModal');
+        const generateUrlInput = document.getElementById('generate_url');
+        const learningUrlInput = document.getElementById('learning_url');
+        const messageArea = document.getElementById('generate-message-area');
+
+        // Reset message
+        messageArea.style.display = 'none';
+        messageArea.textContent = '';
+        messageArea.className = '';
+
+        // Pre-fill URL
+        if (learningUrlInput && learningUrlInput.value) {
+            generateUrlInput.value = learningUrlInput.value;
+        } else {
+            generateUrlInput.value = '';
+        }
+
+        modal.style.display = 'block';
+    }
+
+    function closeAutoGenerateModal() {
+        document.getElementById('autoGenerateModal').style.display = 'none';
+    }
+
+    async function runAutoGenerate() {
+        const url = document.getElementById('generate_url').value.trim();
+        const searchKeyword = document.getElementById('generate_search_keyword').value.trim();
+        const timeoutStr = document.getElementById('generate_timeout').value.trim();
+        const initWaitStr = document.getElementById('generate_init_nodriver_page_wait_time').value.trim();
+        const optimize = document.getElementById('generate_optimize').checked;
+
+        const startBtn = document.querySelector('#autoGenerateModal .btn-primary');
+
+        if (!url) {
+            showGenerateMessage('URLを入力してください。', 'error');
+            return;
+        }
+        if (!searchKeyword) {
+            showGenerateMessage('検索キーワードを入力してください。', 'error');
+            return;
+        }
+
+        showGenerateMessage('生成中...時間がかかる場合があります。', 'info');
+        startBtn.disabled = true;
+
+        const requestBody = {
+            url: url,
+            search_keyword: searchKeyword,
+            optimize: optimize
+        };
+        if (timeoutStr) requestBody.timeout = parseInt(timeoutStr, 10);
+        if (initWaitStr) requestBody.init_nodriver_page_wait_time = parseInt(initWaitStr, 10);
+
+        try {
+            const response = await fetch("{{ url_for('post_download_config_generate') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.detail || '生成に失敗しました。');
+            }
+
+            // Success
+            if (result.download_type) {
+                document.getElementById('download_type').value = result.download_type;
+            }
+            if (result.download_config) {
+                document.getElementById('download_config').value = JSON.stringify(result.download_config, null, 2);
+            }
+
+            closeAutoGenerateModal();
+            showMessage('ダウンロード設定を自動生成しました。', 'success');
+
+        } catch (error) {
+            showGenerateMessage(`エラー: ${error.message}`, 'error');
+        } finally {
+            startBtn.disabled = false;
+        }
+    }
+
+    function showGenerateMessage(msg, type) {
+        const messageArea = document.getElementById('generate-message-area');
+        messageArea.textContent = msg;
+        messageArea.style.display = 'block';
+        if (type === 'error') {
+            messageArea.style.backgroundColor = '#f8d7da';
+            messageArea.style.color = '#721c24';
+            messageArea.style.border = '1px solid #f5c6cb';
+        } else if (type === 'info') {
+            messageArea.style.backgroundColor = '#cce5ff';
+            messageArea.style.color = '#004085';
+            messageArea.style.border = '1px solid #b8daff';
+        }
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('autoGenerateModal');
+        if (event.target == modal) {
+            closeAutoGenerateModal();
+        }
+    });
+
+
+
 
 </script>
 {% endblock %}
