@@ -19,7 +19,9 @@ API_OPTIONS = {
         "sofmap": {"timeout": 17.0},
         "geo": {"timeout": 18.0},
         "gemini": {"timeout": 300.0},
-    }
+    },
+    "url_analysis": {"url": "http://localhost:8090/", "timeout": 30},
+    "url_generate": {"url": "http://localhost:8090/", "timeout": 5},
 }
 HTML_OPTIONS = {
     "search2kakaku": {

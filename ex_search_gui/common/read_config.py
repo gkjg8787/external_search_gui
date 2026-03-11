@@ -15,6 +15,8 @@ class APIOtpion(BaseModel):
 
 class APIOptions(BaseModel):
     get_data: APIOtpion
+    url_analysis: APIOtpion
+    url_generate: APIOtpion
 
 
 class SearchToKakakuOption(BaseModel):

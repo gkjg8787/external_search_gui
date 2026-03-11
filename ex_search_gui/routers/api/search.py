@@ -6,26 +6,7 @@ import structlog
 
 from databases.sql.util import get_async_session
 from domain.models.search import command as search_command, search as search_model
-from domain.schemas.search import (
-    SearchLabelResponse,
-    SearchURLConfigRequest,
-    SearchURLConfigResponse,
-    SearchURLConfigPreviewRequest,
-    SearchURLConfigPreviewResponse,
-    SearchByLabelRequest,
-    SearchByLabelResponse,
-    ProductPageConfigPreviewRequest,
-    ProductPageConfigPreviewResponse,
-    ProductPageConfigRequest,
-    ProductPageConfigResponse,
-    ProductLabelResponse,
-    GroupResponse,
-    GroupCreate,
-    GroupUpdate,
-    GeneralSuccessResponse,
-    DownloadConfigGenerateRequest,
-    DownloadConfigGenerateResponse,
-)
+from domain.schemas import search as search_schema
 from databases.sql.search.repository import (
     SearchURLConfigRepositorySQL as urlconfig_repo,
     ProductPageConfigRepositorySQL as productconfig_repo,
@@ -41,7 +22,7 @@ from app.label.add import SearchLabelDownLoadConfigTemplateService
 router = APIRouter(prefix="/api", tags=["api"])
 
 
-@router.get("/labels/", response_model=list[SearchLabelResponse])
+@router.get("/labels/", response_model=list[search_schema.SearchLabelResponse])
 async def get_labels(
     request: Request,
     db: AsyncSession = Depends(get_async_session),
@@ -59,7 +40,7 @@ async def get_labels(
     )
     if db_labels:
         labels = [
-            SearchLabelResponse(
+            search_schema.SearchLabelResponse(
                 id=db_label.id,
                 label_name=db_label.label_name,
                 base_url=db_label.base_url,
@@ -75,10 +56,10 @@ async def get_labels(
     return labels
 
 
-@router.post("/labels/", response_model=SearchURLConfigResponse)
+@router.post("/labels/", response_model=search_schema.SearchURLConfigResponse)
 async def post_labels(
     request: Request,
-    labelreq: SearchURLConfigRequest,
+    labelreq: search_schema.SearchURLConfigRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
     structlog.contextvars.clear_contextvars()
@@ -99,14 +80,14 @@ async def post_labels(
         )
     ]
     await urlconfig_repo(db).save_all(urlconfigs)
-    return SearchURLConfigResponse(success=True)
+    return search_schema.SearchURLConfigResponse(success=True)
 
 
-@router.put("/labels/{id}/", response_model=SearchURLConfigResponse)
+@router.put("/labels/{id}/", response_model=search_schema.SearchURLConfigResponse)
 async def update_label(
     request: Request,
     id: int,
-    labelreq: SearchURLConfigRequest,
+    labelreq: search_schema.SearchURLConfigRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
     structlog.contextvars.clear_contextvars()
@@ -130,13 +111,15 @@ async def update_label(
         await urlconfig_repo(db).save_all([urlconfig])
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return SearchURLConfigResponse(success=True)
+    return search_schema.SearchURLConfigResponse(success=True)
 
 
-@router.post("/labels/preview/", response_model=SearchURLConfigPreviewResponse)
+@router.post(
+    "/labels/preview/", response_model=search_schema.SearchURLConfigPreviewResponse
+)
 async def post_labels_preview(
     request: Request,
-    previewreq: SearchURLConfigPreviewRequest,
+    previewreq: search_schema.SearchURLConfigPreviewRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
     structlog.contextvars.clear_contextvars()
@@ -150,7 +133,7 @@ async def post_labels_preview(
     return response
 
 
-@router.delete("/labels/{id}/", response_model=SearchURLConfigResponse)
+@router.delete("/labels/{id}/", response_model=search_schema.SearchURLConfigResponse)
 async def delete_label(
     request: Request,
     id: int,
@@ -167,7 +150,7 @@ async def delete_label(
         await urlconfig_repo(db).delete_by_id(id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=f"type:{type(e)}, value:{e}")
-    return SearchURLConfigResponse(success=True)
+    return search_schema.SearchURLConfigResponse(success=True)
 
 
 @router.get("/labels/config/template/", response_model=dict)
@@ -197,10 +180,10 @@ async def get_label_config_template(
     return config_template.model_dump(exclude_none=True)
 
 
-@router.post("/labels/search/", response_model=SearchByLabelResponse)
+@router.post("/labels/search/", response_model=search_schema.SearchByLabelResponse)
 async def search_by_label(
     request: Request,
-    searchreq: SearchByLabelRequest,
+    searchreq: search_schema.SearchByLabelRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
     structlog.contextvars.clear_contextvars()
@@ -220,7 +203,7 @@ async def search_by_label(
             status_code=500, detail="Multiple labels found with the same ID"
         )
     db_label = db_labels[0]
-    preview_request = SearchURLConfigPreviewRequest(
+    preview_request = search_schema.SearchURLConfigPreviewRequest(
         id=db_label.id,
         label_name=db_label.label_name,
         base_url=db_label.base_url,
@@ -232,18 +215,21 @@ async def search_by_label(
     )
     response = await search_via_api_for_preview(ses=db, searchreq=preview_request)
     if len(response.results) == 0:
-        return SearchByLabelResponse(results={})
+        return search_schema.SearchByLabelResponse(results={})
     # response.resultsはURLをキーとする辞書なので、最初の値を取得する
     first_result = list(response.results.values())[0]
-    return SearchByLabelResponse(results={searchreq.label_id: first_result})
+    return search_schema.SearchByLabelResponse(
+        results={searchreq.label_id: first_result}
+    )
 
 
 @router.post(
-    "/labels/product/preview/", response_model=ProductPageConfigPreviewResponse
+    "/labels/product/preview/",
+    response_model=search_schema.ProductPageConfigPreviewResponse,
 )
 async def post_product_page_config_preview(
     request: Request,
-    previewreq: ProductPageConfigPreviewRequest,
+    previewreq: search_schema.ProductPageConfigPreviewRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
     structlog.contextvars.clear_contextvars()
@@ -257,7 +243,7 @@ async def post_product_page_config_preview(
     return response
 
 
-@router.get("/labels/product/", response_model=list[ProductLabelResponse])
+@router.get("/labels/product/", response_model=list[search_schema.ProductLabelResponse])
 async def get_product_page_labels(
     request: Request,
     db: AsyncSession = Depends(get_async_session),
@@ -275,7 +261,7 @@ async def get_product_page_labels(
     )
     if db_labels:
         labels = [
-            ProductLabelResponse(
+            search_schema.ProductLabelResponse(
                 id=db_label.id,
                 label_name=db_label.label_name,
                 url_pattern=db_label.url_pattern,
@@ -290,10 +276,10 @@ async def get_product_page_labels(
     return labels
 
 
-@router.post("/labels/product/", response_model=ProductPageConfigResponse)
+@router.post("/labels/product/", response_model=search_schema.ProductPageConfigResponse)
 async def post_product_page_label(
     request: Request,
-    labelreq: ProductPageConfigRequest,
+    labelreq: search_schema.ProductPageConfigRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
     structlog.contextvars.clear_contextvars()
@@ -313,14 +299,16 @@ async def post_product_page_label(
         )
     ]
     await productconfig_repo(db).save_all(product_configs)
-    return ProductPageConfigResponse(success=True)
+    return search_schema.ProductPageConfigResponse(success=True)
 
 
-@router.put("/labels/product/{id}/", response_model=ProductPageConfigResponse)
+@router.put(
+    "/labels/product/{id}/", response_model=search_schema.ProductPageConfigResponse
+)
 async def update_product_page_label(
     request: Request,
     id: int,
-    labelreq: ProductPageConfigRequest,
+    labelreq: search_schema.ProductPageConfigRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
     structlog.contextvars.clear_contextvars()
@@ -342,10 +330,12 @@ async def update_product_page_label(
         await productconfig_repo(db).save_all([product_config])
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return ProductPageConfigResponse(success=True)
+    return search_schema.ProductPageConfigResponse(success=True)
 
 
-@router.delete("/labels/product/{id}/", response_model=ProductPageConfigResponse)
+@router.delete(
+    "/labels/product/{id}/", response_model=search_schema.ProductPageConfigResponse
+)
 async def delete_product_page_label(
     request: Request,
     id: int,
@@ -362,13 +352,13 @@ async def delete_product_page_label(
         await productconfig_repo(db).delete_by_id(id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return ProductPageConfigResponse(success=True)
+    return search_schema.ProductPageConfigResponse(success=True)
 
 
 # --- Group CRUD ---
 
 
-@router.get("/groups/", response_model=list[GroupResponse])
+@router.get("/groups/", response_model=list[search_schema.GroupResponse])
 async def get_all_groups(
     request: Request,
     db: AsyncSession = Depends(get_async_session),
@@ -385,7 +375,7 @@ async def get_all_groups(
     db_groups = await repo.get_all_groups()
     if db_groups:
         groups = [
-            GroupResponse(
+            search_schema.GroupResponse(
                 id=db_group.id,
                 name=db_group.name,
             )
@@ -396,7 +386,9 @@ async def get_all_groups(
     return groups
 
 
-@router.get("/groups/{group_id}/labels/", response_model=list[SearchLabelResponse])
+@router.get(
+    "/groups/{group_id}/labels/", response_model=list[search_schema.SearchLabelResponse]
+)
 async def get_labels_for_group(
     request: Request,
     group_id: int,
@@ -414,7 +406,7 @@ async def get_labels_for_group(
     db_labels = await repo.get_labels_for_group(group_id)
     if db_labels:
         labels = [
-            SearchLabelResponse(
+            search_schema.SearchLabelResponse(
                 id=db_label.id,
                 label_name=db_label.label_name,
                 base_url=db_label.base_url,
@@ -430,10 +422,10 @@ async def get_labels_for_group(
     return labels
 
 
-@router.post("/groups/", response_model=GroupResponse, status_code=201)
+@router.post("/groups/", response_model=search_schema.GroupResponse, status_code=201)
 async def create_group(
     request: Request,
-    group_create: GroupCreate,
+    group_create: search_schema.GroupCreate,
     db: AsyncSession = Depends(get_async_session),
 ):
     """グループの新規作成"""
@@ -449,18 +441,18 @@ async def create_group(
     db_created_group = await repo.create_group(group)
     if db_created_group is None:
         raise HTTPException(status_code=500, detail="Failed to create group")
-    created_group = GroupResponse(
+    created_group = search_schema.GroupResponse(
         id=db_created_group.id,
         name=db_created_group.name,
     )
     return created_group
 
 
-@router.put("/groups/{group_id}/", response_model=GroupResponse)
+@router.put("/groups/{group_id}/", response_model=search_schema.GroupResponse)
 async def update_group_name(
     request: Request,
     group_id: int,
-    group_update: GroupUpdate,
+    group_update: search_schema.GroupUpdate,
     db: AsyncSession = Depends(get_async_session),
 ):
     """グループ名の更新"""
@@ -477,14 +469,16 @@ async def update_group_name(
     db_updated_group = await repo.update_group_name(group_id, group_update.name)
     if not db_updated_group:
         raise HTTPException(status_code=404, detail="Group not found")
-    updated_group = GroupResponse(
+    updated_group = search_schema.GroupResponse(
         id=db_updated_group.id,
         name=db_updated_group.name,
     )
     return updated_group
 
 
-@router.delete("/groups/{group_id}/", response_model=GeneralSuccessResponse)
+@router.delete(
+    "/groups/{group_id}/", response_model=search_schema.GeneralSuccessResponse
+)
 async def delete_group(
     request: Request,
     group_id: int,
@@ -502,12 +496,12 @@ async def delete_group(
     success = await repo.delete_group(group_id)
     if not success:
         raise HTTPException(status_code=404, detail="Group not found")
-    return GeneralSuccessResponse(success=True)
+    return search_schema.GeneralSuccessResponse(success=True)
 
 
 @router.post(
     "/groups/{group_id}/labels/{label_id}/",
-    response_model=GeneralSuccessResponse,
+    response_model=search_schema.GeneralSuccessResponse,
     status_code=201,
 )
 async def add_label_to_group(
@@ -530,11 +524,12 @@ async def add_label_to_group(
         # 既に存在する場合や、親が見つからない場合など。
         # Repositoryの実装によってはより詳細なエラーハンドリングが必要。
         raise HTTPException(status_code=400, detail="Could not add label to group")
-    return GeneralSuccessResponse(success=True)
+    return search_schema.GeneralSuccessResponse(success=True)
 
 
 @router.delete(
-    "/groups/{group_id}/labels/{label_id}/", response_model=GeneralSuccessResponse
+    "/groups/{group_id}/labels/{label_id}/",
+    response_model=search_schema.GeneralSuccessResponse,
 )
 async def remove_label_from_group(
     request: Request,
@@ -554,13 +549,16 @@ async def remove_label_from_group(
     success = await repo.remove_label_from_group(group_id, label_id)
     if not success:
         raise HTTPException(status_code=404, detail="Link not found")
-    return GeneralSuccessResponse(success=True)
+    return search_schema.GeneralSuccessResponse(success=True)
 
 
-@router.post("/downloadconfig/generate/", response_model=DownloadConfigGenerateResponse)
+@router.post(
+    "/downloadconfig/generate/",
+    response_model=search_schema.DownloadConfigGenerateResponse,
+)
 async def post_download_config_generate(
     request: Request,
-    downloadconfigreq: DownloadConfigGenerateRequest,
+    downloadconfigreq: search_schema.DownloadConfigGenerateRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
     structlog.contextvars.clear_contextvars()
