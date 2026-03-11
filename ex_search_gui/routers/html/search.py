@@ -143,7 +143,7 @@ async def read_labels_add_confirm(
     request: Request,
     label_name: str = Form(...),  # 直接Form依存関係を使用
     base_url: str = Form(...),
-    query: str = Form(...),
+    query: str = Form(""),
     query_encoding: str = Form("utf-8"),
     download_type: str = Form(""),
     download_config: str = Form(""),

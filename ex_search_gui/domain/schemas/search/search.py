@@ -1,5 +1,5 @@
 from typing import Any, Optional, Literal
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
@@ -16,9 +16,17 @@ class SearchURLConfigSchema(BaseModel):
     @field_validator("query")
     @classmethod
     def validate_query(cls, v: any) -> str:
-        if v is not None and isinstance(v, str):
-            # ?と=を削除する処理
-            v = v.replace("?", "").replace("=", "")
+        if isinstance(v, str):
+            # 1. 念のため先頭の '?' を除去
+            clean_v = v.lstrip("?")
+
+            # 2. クエリ形式 (key=value) をパースして最初のキーを取得
+            # parse_qs は {'q': ['xxx']} のような辞書を返します
+            params = parse_qs(clean_v)
+
+            if params:
+                # 最初のキー（例: 'q'）を返す
+                return list(params.keys())[0]
         return v
 
     @field_validator("base_url", mode="after")

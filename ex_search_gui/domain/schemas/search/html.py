@@ -15,7 +15,7 @@ class SearchLabels(BaseModel):
 class SearchLabelAddForm(BaseModel):
     label_name: Annotated[str, Form(...)]
     base_url: Annotated[str, Form(...)]
-    query: Annotated[str, Form(...)]
+    query: Annotated[str, Form("")]
     query_encoding: Annotated[str, Form("utf-8")]
     download_type: Annotated[str, Form("")]
     download_config: Annotated[str, Form("")]  # JSON文字列として扱う

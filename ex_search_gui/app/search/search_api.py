@@ -16,17 +16,25 @@ async def generate_target_urls(
     base_url: str, query_pattern: str, keywords: list[str], encoding: str
 ) -> list[str]:
     target_urls = []
-    parsed_url = urlparse(base_url)
     if not encoding:
         encoding = "utf-8"
     for keyword in keywords:
-        if not keyword or not query_pattern:
+        if not keyword:
             continue
-        encoded_keyword = f"{query_pattern}={quote(keyword, encoding=encoding)}"
-        if parsed_url.query:
-            encoded_keyword = f"{parsed_url.query}&{encoded_keyword}"
-        url = parsed_url._replace(query=encoded_keyword).geturl()
-        target_urls.append(url)
+
+        if "{keyword}" in base_url:
+            encoded_keyword = quote(keyword, encoding=encoding)
+            url = base_url.replace("{keyword}", encoded_keyword)
+            target_urls.append(url)
+        elif query_pattern:
+            parsed_url = urlparse(base_url)
+            new_query_part = f"{query_pattern}={quote(keyword, encoding=encoding)}"
+            if parsed_url.query:
+                final_query = f"{parsed_url.query}&{new_query_part}"
+            else:
+                final_query = new_query_part
+            url = parsed_url._replace(query=final_query).geturl()
+            target_urls.append(url)
     return target_urls
 
 

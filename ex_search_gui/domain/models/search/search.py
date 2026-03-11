@@ -37,7 +37,7 @@ class JSONEncodedDictNoEnsureAscii(TypeDecorator):
 class SearchURLConfig(SQLBase, table=True):
     label_name: str = Field(index=True)
     base_url: str
-    query: str
+    query: str = Field(default="")
     query_encoding: str = Field(default="utf-8")
     download_type: str = Field(default="")
     download_config: dict = Field(
