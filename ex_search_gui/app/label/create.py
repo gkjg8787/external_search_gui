@@ -98,11 +98,7 @@ async def create_labels(
 
         download_type = generated_dl_type if generated_dl_config else "httpx"
         download_config = generated_dl_config or {
-            "label": (
-                f"{domain}_{category_name}_search"
-                if category_name
-                else f"{domain}_search"
-            ),
+            "label": f"{domain}_search",
             "sitename": domain,
         }
 

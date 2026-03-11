@@ -57,10 +57,10 @@ class OptionData(BaseModel):
 
 
 class SelectData(BaseModel):
-    id: Optional[str]
-    name: Optional[str]
-    class_list: list[str]
-    options: list[OptionData]
+    id: Optional[str] = None
+    name: Optional[str] = None
+    class_list: list[str] = Field(default_factory=list)
+    options: list[OptionData] = Field(default_factory=list)
     visible: bool = True
 
 
