@@ -171,3 +171,9 @@ class DownloadConfigGenerateRequest(BaseModel):
 class DownloadConfigGenerateResponse(BaseModel):
     download_config: dict
     download_type: Literal["", "httpx", "selenium", "nodriver"]
+
+
+# ラベル生成APIのリクエストボディ
+class GenerateLabelsRequest(BaseModel):
+    url: str
+    search_keyword: str = ""

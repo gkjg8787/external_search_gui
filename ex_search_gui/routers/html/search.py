@@ -548,3 +548,14 @@ async def edit_group(  # グループ編集ページ
     return templates.TemplateResponse(
         request=request, name="search/group_edit.html", context=context
     )
+
+
+@router.get("/labels/auto_create", response_class=HTMLResponse)
+async def read_labels_auto_create(request: Request):
+    """
+    ラベル自動作成ページを表示する
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="search/label_auto_create.html",
+    )

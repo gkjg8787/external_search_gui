@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/searchlabel.css') }}" type="text/css">
+    <title>ラベルの自動作成</title>
+    <style>
+        .form-container { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="url"], .form-group input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-actions { text-align: right; }
+        .form-actions button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #09f; animation: spin 1s ease infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #message-area { margin-top: 20px; padding: 15px; border-radius: 4px; display: none; }
+        .message-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .btn-success { background-color: #28a745; }
+        .btn-secondary { background-color: #6c757d; }
+        .button { padding: 10px 20px; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+        @media (prefers-color-scheme: dark) {
+            .form-container { background-color: #2d2d2d; }
+            .form-group label { color: #e0e0e0; }
+            .form-group input[type="url"], .form-group input[type="text"] { background-color: #3c3c3c; color: #e0e0e0; border-color: #555; }
+            .message-success { background-color: #1a3c23; color: #c3e6cb; border-color: #2f663d; }
+            .message-error { background-color: #491f22; color: #f5c6cb; border-color: #843534; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>ラベルの自動作成</h1>
+
+    <div class="form-container">
+        <div id="auto-create-form-area">
+            <div class="form-group">
+                <label for="auto_create_url">解析対象URL</label>
+                <input type="url" id="auto_create_url" placeholder="https://example.com/search?q=test" required>
+            </div>
+            <div class="form-group">
+                <label for="auto_create_search_keyword">検索キーワード (任意)</label>
+                <input type="text" id="auto_create_search_keyword" placeholder="download_configを自動生成する場合に指定">
+            </div>
+        </div>
+        <div class="form-actions">
+            <a href="{{ url_for('read_labels') }}" class="button btn-secondary">一覧に戻る</a>
+            <button type="button" class="button btn-primary" onclick="runAutoCreate()">実行</button>
+        </div>
+    </div>
+
+    <div id="message-area"></div>
+    <div id="results-area" style="margin-top: 20px;">
+        <!-- Generated labels will be shown here -->
+    </div>
+</div>
+
+<script>
+let generatedLabels = [];
+
+function toggleDetails(button) {
+    const details = button.closest('.label-header').nextElementSibling;
+    if (details.classList.contains('collapsed')) {
+        details.classList.remove('collapsed');
+        button.textContent = '閉じる';
+    } else {
+        details.classList.add('collapsed');
+        button.textContent = '詳細';
+    }
+}
+
+async function runAutoCreate() {
+    const url = document.getElementById('auto_create_url').value.trim();
+    if (!url) {
+        showMessage('解析対象URLを入力してください。', 'error');
+        return;
+    }
+    const searchKeyword = document.getElementById('auto_create_search_keyword').value.trim();
+    const resultsArea = document.getElementById('results-area');
+    const runBtn = document.querySelector('.btn-primary');
+
+    resultsArea.innerHTML = '<div class="spinner"></div>';
+    runBtn.disabled = true;
+
+    try {
+        const response = await fetch("{{ url_for('generate_labels_from_url') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url, search_keyword: searchKeyword })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '自動作成に失敗しました。');
+        }
+
+        const labels = await response.json();
+        generatedLabels = labels; // Store for registration
+        renderGeneratedLabels(labels);
+
+    } catch (error) {
+        resultsArea.innerHTML = `<p style="color: red;">エラー: ${error.message}</p>`;
+    } finally {
+        runBtn.disabled = false;
+    }
+}
+
+function renderGeneratedLabels(labels) {
+    const resultsArea = document.getElementById('results-area');
+    if (!labels || labels.length === 0) {
+        resultsArea.innerHTML = '<p>作成できるラベルはありませんでした。</p>';
+        return;
+    }
+
+    let html = '<h2>生成されたラベル</h2><ul class="label-list">';
+    labels.forEach((label, index) => {
+        const isCollapsed = index > 0;
+        html += `
+            <li class="label-item">
+                <div class="label-header">
+                    <strong>${escapeHtml(label.label_name)}</strong>
+                    <div class="label-actions">
+                        <button class="toggle-details-btn" onclick="toggleDetails(this)">${isCollapsed ? '詳細' : '閉じる'}</button>
+                    </div>
+                </div>
+                <div class="label-details ${isCollapsed ? 'collapsed' : ''}">
+                    <p><strong>ベースURL:</strong> ${escapeHtml(label.base_url)}</p>
+                    <p><strong>クエリ:</strong> ${escapeHtml(label.query)}</p>
+                    <p><strong>クエリエンコーディング:</strong> ${escapeHtml(label.query_encoding)}</p>
+                    <p><strong>ダウンロードタイプ:</strong> ${escapeHtml(label.download_type)}</p>
+                    <p><strong>ダウンロード設定:</strong> <pre><code>${escapeHtml(JSON.stringify(label.download_config, null, 2))}</code></pre></p>
+                </div>
+            </li>
+        `;
+    });
+    html += '</ul>';
+    html += '<div style="text-align: right; margin-top: 20px;"><button class="button btn-success" onclick="registerGeneratedLabels()">この内容で登録する</button></div>';
+
+    resultsArea.innerHTML = html;
+}
+
+async function registerGeneratedLabels() {
+    if (generatedLabels.length === 0) {
+        showMessage('登録するラベルがありません。', 'error');
+        return;
+    }
+
+    const registerBtn = document.querySelector('#results-area .btn-success');
+    registerBtn.disabled = true;
+    registerBtn.textContent = '登録中...';
+
+    try {
+        const response = await fetch("{{ url_for('post_labels_batch') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(generatedLabels)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '登録に失敗しました。');
+        }
+
+        showMessage('ラベルを登録しました。2秒後にラベル一覧へ移動します。', 'success');
+        setTimeout(() => { window.location.href = "{{ url_for('read_labels') }}"; }, 2000);
+
+    } catch (error) {
+        showMessage(`エラー: ${error.message}`, 'error');
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'この内容で登録する';
+    }
+}
+
+function showMessage(message, type) {
+    const messageArea = document.getElementById('message-area');
+    messageArea.textContent = message;
+    messageArea.className = `message-${type}`;
+    messageArea.style.display = 'block';
+}
+
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') {
+        return unsafe === null || unsafe === undefined ? '' : String(unsafe);
+    }
+    return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+</script>
+{% endblock %}

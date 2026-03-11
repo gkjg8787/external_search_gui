@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
@@ -18,6 +18,7 @@ from app.search.search_api import (
     generate_download_config_via_api,
 )
 from app.label.add import SearchLabelDownLoadConfigTemplateService
+from app.label.create import create_labels
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -572,3 +573,72 @@ async def post_download_config_generate(
     if not ok:
         raise HTTPException(status_code=400, detail=result)
     return result
+
+
+@router.post(
+    "/labels/generate_from_url",
+    response_model=list[search_schema.SearchLabelResponse],
+)
+async def generate_labels_from_url(
+    request: Request,
+    req: search_schema.GenerateLabelsRequest,
+    ses: AsyncSession = Depends(get_async_session),
+):
+    """
+    URLから検索ラベル設定を生成する
+    """
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api generate labels from url called", req=req)
+    try:
+        # create_labelsはDBモデルのリストを返す
+        generated_labels = await create_labels(ses, req.url, req.search_keyword)
+        # FastAPIが自動的にPydanticスキーマに変換してレスポンスを生成する
+        return generated_labels
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # 予期せぬエラー
+        raise HTTPException(
+            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
+        )
+
+
+@router.post("/labels/batch", response_model=dict)
+async def post_labels_batch(
+    request: Request,
+    labels: list[search_schema.SearchURLConfigRequest] = Body(...),
+    ses: AsyncSession = Depends(get_async_session),
+):
+    """
+    複数のラベル設定を一括でDBに登録する
+    """
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api labels batch called", labels=labels)
+    if not labels:
+        raise HTTPException(status_code=400, detail="No labels provided.")
+    try:
+        # PydanticスキーマからDBモデルに変換
+        db_labels = [
+            search_model.SearchURLConfig(**label.model_dump(exclude_unset=True))
+            for label in labels
+        ]
+        repo = urlconfig_repo(ses)
+        await repo.save_all(db_labels)
+        return {
+            "success": True,
+            "message": f"{len(db_labels)} labels have been registered.",
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to register labels: {str(e)}"
+        )

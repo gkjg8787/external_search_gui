@@ -44,6 +44,7 @@
         <h1>ラベル一覧</h1>
     </div>
     <div class="menu-container">
+        <a href="{{ url_for('read_labels_auto_create') }}" class="btn btn-config">自動作成</a>
         <a href="{{ url_for('read_labels_add') }}" class="btn btn-add">新規追加</a>
         <a href="{{ url_for('read_search') }}" class="btn btn-search">ラベルで検索</a>
         <a href="{{ url_for('read_product_labels')}}" class="btn btn-product-labels">商品ページラベル一覧</a>
