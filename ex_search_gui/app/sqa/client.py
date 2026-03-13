@@ -36,14 +36,15 @@ async def _get_api_result(url: str, method: str, timeout: float, data: dict):
     return True, "", res_json
 
 
-async def probe_url(url: str, search_keyword: str = ""):
+async def probe_url(url: str, search_keyword: str = "", no_useragent=False):
     opts = get_api_options()
     api_url = urljoin(opts.url_analysis.url, API_OPTIONS["probe"]["path"])
     timeout = opts.url_analysis.timeout
     method = API_OPTIONS["probe"]["method"]
-    data = SearchURLProbeRequest(url=url, search_word=search_keyword).model_dump(
-        mode="json", exclude_unset=True
-    )
+    data_model = SearchURLProbeRequest(url=url, search_word=search_keyword)
+    if no_useragent:
+        data_model.useragent = None
+    data = data_model.model_dump(mode="json", exclude_unset=True)
 
     ok, msg, result = await _get_api_result(
         url=api_url, method=method, timeout=timeout, data=data

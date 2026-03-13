@@ -45,7 +45,9 @@ class SearchURLConfig(SQLBase, table=True):
         sa_column=Column(MutableDict.as_mutable(JSONEncodedDictNoEnsureAscii())),
     )
     # Relationships
-    groups_link: list["GroupLabelLink"] = Relationship(back_populates="label")
+    groups_link: list["GroupLabelLink"] = Relationship(
+        back_populates="label", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
 class GroupLabelLink(SQLModel, table=True):

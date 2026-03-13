@@ -166,6 +166,11 @@
             </div>
             {% endfor %}
         </div>
+        {% if labels|length >= 2 %}
+        <div style="margin-top: 5px; text-align: right;">
+            <button id="uncheck-all-button" type="button" style="padding: 4px 10px; cursor: pointer;">全てのチェックを外す</button>
+        </div>
+        {% endif %}
     </div>
 
     <div id="results-container" class="results-container">
@@ -180,6 +185,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchButton = document.getElementById('search-button');
     const searchKeywordInput = document.getElementById('search-keyword');
     const resultsContainer = document.getElementById('results-container');
+    const uncheckAllButton = document.getElementById('uncheck-all-button');
+
+    if (uncheckAllButton) {
+        uncheckAllButton.addEventListener('click', () => {
+            const checkboxes = labelsContainer.querySelectorAll('input[name="label_ids"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        });
+    }
 
 
     // 2. 検索ボタンのクリックイベント
