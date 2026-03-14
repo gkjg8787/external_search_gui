@@ -177,3 +177,4 @@ class DownloadConfigGenerateResponse(BaseModel):
 class GenerateLabelsRequest(BaseModel):
     url: str
     search_keyword: str = ""
+    no_useragent: bool = False

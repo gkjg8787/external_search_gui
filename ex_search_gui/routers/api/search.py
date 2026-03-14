@@ -596,7 +596,9 @@ async def generate_labels_from_url(
     log.info("api generate labels from url called", req=req)
     try:
         # create_labelsはDBモデルのリストを返す
-        generated_labels = await create_labels(ses, req.url, req.search_keyword)
+        generated_labels = await create_labels(
+            ses, req.url, req.search_keyword, req.no_useragent
+        )
         # FastAPIが自動的にPydanticスキーマに変換してレスポンスを生成する
         return generated_labels
     except (ValueError, TypeError) as e:

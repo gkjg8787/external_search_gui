@@ -1,4 +1,4 @@
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
@@ -16,7 +16,7 @@ log = structlog.get_logger(__name__)
 
 
 async def create_labels(
-    ses: AsyncSession, url: str, search_keyword: str = ""
+    ses: AsyncSession, url: str, search_keyword: str = "", no_useragent: bool = False
 ) -> list[search_model.SearchURLConfig]:
     """
     渡されたURLを解析し、検索ラベル設定を作成する
@@ -34,7 +34,9 @@ async def create_labels(
         TypeError: 予期しないレスポンスタイプの場合
     """
     # 1. 渡されたURLから解析結果を取得
-    ok, probe_result = await probe_url(url=url, search_keyword=search_keyword)
+    ok, probe_result = await probe_url(
+        url=url, search_keyword=search_keyword, no_useragent=no_useragent
+    )
     if not ok:
         raise ValueError(f"Failed to probe URL: {probe_result}")
     if not isinstance(probe_result, SearchURLProbeResponse):
@@ -68,7 +70,15 @@ async def create_labels(
     generated_dl_config = None
     if search_keyword and url_templates_with_category:
         template_for_dl_config, _ = url_templates_with_category[0]
-        test_url = template_for_dl_config.replace("{keyword}", search_keyword)
+
+        keyword_param = next(
+            (p for p in url_info.parameters.values() if p.value_type == "keyword"), None
+        )
+        encoding = keyword_param.encoding if keyword_param else "utf-8"
+
+        # URL エンコードを適用
+        encoded_keyword = quote(search_keyword, encoding=encoding)
+        test_url = template_for_dl_config.replace("{keyword}", encoded_keyword)
         dl_req = DownloadConfigGenerateRequest(
             url=test_url, search_keyword=search_keyword
         )

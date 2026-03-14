@@ -44,6 +44,10 @@
                 <label for="auto_create_search_keyword">検索キーワード (任意)</label>
                 <input type="text" id="auto_create_search_keyword" placeholder="download_configを自動生成する場合に指定">
             </div>
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="no_useragent" name="no_useragent" style="width: auto; margin-bottom: 0;">
+                <label for="no_useragent" style="margin-bottom: 0; font-weight: normal;">UserAgentをOFFにする</label>
+            </div>
         </div>
         <div class="form-actions">
             <a href="{{ url_for('read_labels') }}" class="button btn-secondary">一覧に戻る</a>
@@ -78,6 +82,7 @@ async function runAutoCreate() {
         return;
     }
     const searchKeyword = document.getElementById('auto_create_search_keyword').value.trim();
+    const noUseragent = document.getElementById('no_useragent').checked;
     const resultsArea = document.getElementById('results-area');
     const runBtn = document.querySelector('.btn-primary');
 
@@ -88,7 +93,7 @@ async function runAutoCreate() {
         const response = await fetch("{{ url_for('generate_labels_from_url') }}", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: url, search_keyword: searchKeyword })
+            body: JSON.stringify({ url: url, search_keyword: searchKeyword, no_useragent: noUseragent })
         });
 
         if (!response.ok) {
