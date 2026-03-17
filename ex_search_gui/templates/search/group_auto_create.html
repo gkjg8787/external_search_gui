@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" type="text/css">
+    <title>ラベルの自動グループ化</title>
+    <style>
+        .form-container { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group .checkbox-label { display: flex; align-items: center; gap: 10px; font-weight: normal; }
+        .form-group input[type="text"], .form-group input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-group input[type="checkbox"] { width: auto; }
+        .form-actions { text-align: right; margin-top: 20px; }
+        .button { padding: 10px 20px; color: white; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; }
+        .btn-primary { background-color: #007bff; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-success { background-color: #28a745; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #09f; animation: spin 1s ease infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #message-area { margin-top: 20px; padding: 15px; border-radius: 4px; display: none; }
+        .message-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .group-selection-container { border: 1px solid #ccc; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+        .result-group { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; padding: 10px; }
+        .result-group h3 { margin-top: 0; }
+        .result-group ul { list-style-type: none; padding-left: 0; }
+        .result-group li { background-color: #f1f1f1; padding: 5px; border-radius: 3px; margin-bottom: 5px; }
+
+        @media (prefers-color-scheme: dark) {
+            .form-container { background-color: #2d2d2d; }
+            .form-group label, .form-group .checkbox-label { color: #e0e0e0; }
+            .form-group input[type="text"], .form-group input[type="number"] { background-color: #3c3c3c; color: #e0e0e0; border-color: #555; }
+            .message-success { background-color: #1a3c23; color: #c3e6cb; border-color: #2f663d; }
+            .message-error { background-color: #491f22; color: #f5c6cb; border-color: #843534; }
+            .group-selection-container { border-color: #555; }
+            .result-group { border-color: #555; }
+            .result-group li { background-color: #3a3a3a; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>ラベルの自動グループ化</h1>
+
+    <div class="form-container">
+        <form id="grouping-form">
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="use_all_existing_groups" checked onchange="toggleGroupSelection()">
+                    既存の全グループを振り分け対象にする
+                </label>
+            </div>
+            <div id="group_selection_container" class="form-group" style="display: none;">
+                <label>振り分け対象にするグループを選択</label>
+                <div class="group-selection-container">
+                    {% for group in groups %}
+                        <label class="checkbox-label"><input type="checkbox" name="selected_groups" value="{{ group.name }}"> {{ group.name }}</label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="auto_create_new_groups" checked>
+                    自動で新規グループを作成する
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="segment_split_enabled" checked onchange="toggleSegmentOptions()">
+                    ラベル名をセグメント分割して判定する
+                </label>
+            </div>
+
+            <div id="segment_options">
+                <div class="form-group">
+                    <label for="segment_delimiters">分割する文字 (正規表現)</label>
+                    <input type="text" id="segment_delimiters" value="[_]">
+                </div>
+                <div class="form-group">
+                    <label for="min_segment_match">グループ化するラベルの最低一致数</label>
+                    <input type="number" id="min_segment_match" value="2" min="1">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="dict_category_enable" checked>
+                    辞書によるグループの振り分け
+                </label>
+            </div>
+        </form>
+        <div class="form-actions">
+            <a href="{{ url_for('read_groups') }}" class="button btn-secondary">グループ一覧に戻る</a>
+            <button type="button" id="run-btn" class="button btn-primary" onclick="runGrouping()">振り分け実行</button>
+        </div>
+    </div>
+
+    <div id="message-area"></div>
+    <div id="results-area" style="margin-top: 20px;">
+        <!-- Grouping results will be shown here -->
+    </div>
+</div>
+
+<script>
+    let groupingResults = null;
+    const allGroupNames = {{ groups | map(attribute='name') | list | tojson }};
+
+    function toggleGroupSelection() {
+        const useAll = document.getElementById('use_all_existing_groups').checked;
+        document.getElementById('group_selection_container').style.display = useAll ? 'none' : 'block';
+    }
+
+    function toggleSegmentOptions() {
+        const enabled = document.getElementById('segment_split_enabled').checked;
+        document.getElementById('segment_options').style.display = enabled ? 'block' : 'none';
+    }
+
+    function showMessage(message, type) {
+        const messageArea = document.getElementById('message-area');
+        messageArea.textContent = message;
+        messageArea.className = `message-${type}`;
+        messageArea.style.display = 'block';
+    }
+
+    async function runGrouping() {
+        const runBtn = document.getElementById('run-btn');
+        const resultsArea = document.getElementById('results-area');
+        
+        runBtn.disabled = true;
+        resultsArea.innerHTML = '<div class="spinner"></div>';
+        groupingResults = null;
+
+        const useAllGroups = document.getElementById('use_all_existing_groups').checked;
+        let groupsInit = [];
+        if (useAllGroups) {
+            groupsInit = allGroupNames;
+        } else {
+            document.querySelectorAll('input[name="selected_groups"]:checked').forEach(cb => {
+                groupsInit.push(cb.value);
+            });
+        }
+
+        const requestBody = {
+            groups_init: groupsInit,
+            auto_create_new_groups: document.getElementById('auto_create_new_groups').checked,
+            segment_split_enabled: document.getElementById('segment_split_enabled').checked,
+            segment_delimiters: document.getElementById('segment_delimiters').value,
+            min_segment_match: parseInt(document.getElementById('min_segment_match').value, 10),
+            dict_category_enable: document.getElementById('dict_category_enable').checked
+        };
+
+        try {
+            const response = await fetch("{{ url_for('post_labels_grouping') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'グループ化に失敗しました。');
+            }
+
+            const data = await response.json();
+            groupingResults = data.groups;
+            renderResults(groupingResults);
+
+        } catch (error) {
+            resultsArea.innerHTML = `<p style="color: red;">エラー: ${error.message}</p>`;
+        } finally {
+            runBtn.disabled = false;
+        }
+    }
+
+    function renderResults(groups) {
+        const resultsArea = document.getElementById('results-area');
+        if (!groups || Object.keys(groups).length === 0) {
+            resultsArea.innerHTML = '<p>振り分け結果はありませんでした。</p>';
+            return;
+        }
+
+        let html = '<h2>振り分け結果（未登録）</h2>';
+        for (const [groupName, labels] of Object.entries(groups)) {
+            html += `
+                <div class="result-group">
+                    <h3>${escapeHtml(groupName)}</h3>
+                    <ul>
+                        ${labels.map(label => `<li>${escapeHtml(label)}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+        html += '<div style="text-align: right; margin-top: 20px;"><button class="button btn-success" onclick="registerGrouping()">この内容で登録する</button></div>';
+        resultsArea.innerHTML = html;
+    }
+
+    async function registerGrouping() {
+        if (!groupingResults) {
+            showMessage('登録するデータがありません。', 'error');
+            return;
+        }
+
+        const registerBtn = document.querySelector('#results-area .btn-success');
+        registerBtn.disabled = true;
+        registerBtn.textContent = '登録中...';
+
+        try {
+            const response = await fetch("{{ url_for('apply_grouping') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groups: groupingResults })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || '登録に失敗しました。');
+            }
+
+            showMessage('グループ情報を更新しました。2秒後にグループ一覧へ移動します。', 'success');
+            setTimeout(() => { window.location.href = "{{ url_for('read_groups') }}"; }, 2000);
+
+        } catch (error) {
+            showMessage(`エラー: ${error.message}`, 'error');
+            registerBtn.disabled = false;
+            registerBtn.textContent = 'この内容で登録する';
+        }
+    }
+
+    function escapeHtml(unsafe) {
+        if (typeof unsafe !== 'string') return unsafe;
+        return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        toggleGroupSelection();
+        toggleSegmentOptions();
+    });
+</script>
+{% endblock %}

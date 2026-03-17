@@ -609,7 +609,7 @@ async def generate_labels_from_url(
     except (ValueError, TypeError) as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # 予期せぬエラー
+        log.error("An unexpected error occurred", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"An unexpected error occurred: {str(e)}"
         )
@@ -646,6 +646,7 @@ async def post_labels_batch(
             "message": f"{len(db_labels)} labels have been registered.",
         }
     except Exception as e:
+        log.error("Failed to register labels", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Failed to register labels: {str(e)}"
         )
@@ -669,13 +670,34 @@ async def post_labels_grouping(
     log.info("api grouping labels called", groupingreq=groupingreq)
     try:
         repo = urlconfig_repo(ses)
-        labels = repo.get_all(command=search_command.SearchURLConfigCommand())
+        labels = await repo.get_all(command=search_command.SearchURLConfigCommand())
         category_dict = (
             get_search_label_rules() if groupingreq.dict_category_enable else {}
         )
+        groups_init: dict[str, list[str]] = {}
+        if groupingreq.groups_init:
+            grepo = GroupRepository(ses)
+            all_groups = await grepo.get_all_groups(load_labels=True)
+
+            for group in all_groups:
+                # リストに含まれていないグループはスキップ
+                if group.name not in groupingreq.groups_init:
+                    continue
+
+                # 2. 中間テーブル(labels_link)を介して紐付いているラベル名を取得
+                # group.labels_link -> GroupLabelLink -> label (SearchURLConfig)
+                label_names = [
+                    link.label.label_name
+                    for link in group.labels_link
+                    if link.label is not None
+                ]
+
+                # 3. 結果の辞書に格納
+                groups_init[group.name] = label_names
+
         result = organize_labels(
-            labels=labels,
-            groups_init=groupingreq.groups_init,
+            labels=[label.label_name for label in labels],
+            groups_init=groups_init,
             auto_create_new_groups=groupingreq.auto_create_new_groups,
             category_dict=category_dict,
             segment_split_enabled=groupingreq.segment_split_enabled,
@@ -687,7 +709,77 @@ async def post_labels_grouping(
         else:
             raise ValueError("Failed to organize labels")
     except Exception as e:
+        log.error("Failed to register labels", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Failed to register labels: {str(e)}"
         )
     return result
+
+
+@router.post(
+    "/groups/apply-grouping",
+    response_model=search_schema.GeneralSuccessResponse,
+    name="apply_grouping",
+)
+async def apply_grouping(
+    request: Request,
+    groupingreq: search_schema.ApplyGroupingRequest,
+    ses: AsyncSession = Depends(get_async_session),
+):
+    """自動グループ化の結果を適用する"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api apply grouping called", groupingreq=groupingreq)
+    try:
+        group_repo = GroupRepository(ses)
+        url_repo = urlconfig_repo(ses)
+
+        all_labels = await url_repo.get_all(search_command.SearchURLConfigCommand())
+        label_name_to_id = {l.label_name: l.id for l in all_labels if l.id is not None}
+
+        # 2. グループ名 -> ID のマップを作成
+        # get_all_groups は selectinload なしでOK（IDだけわかれば良いため）
+        all_groups = await group_repo.get_all_groups()
+        group_name_to_id = {g.name: g.id for g in all_groups if g.id is not None}
+
+        # 3. リクエストの各グループについて処理
+        for group_name, label_names in groupingreq.groups.items():
+
+            # グループIDの確定（既存から探すか、新規作成するか）
+            if group_name in group_name_to_id:
+                current_group_id = group_name_to_id[group_name]
+            else:
+                new_group = search_model.Group(name=group_name)
+                # ここで作成した group オブジェクトは直後に expired になる可能性があるため
+                # 返り値から即座に ID だけを抜き出す
+                created_group = await group_repo.create_group(new_group)
+                current_group_id = created_group.id
+                group_name_to_id[group_name] = current_group_id
+
+            # ターゲットとなるラベルIDの集合を作成
+            target_label_ids = {
+                label_name_to_id[ln] for ln in label_names if ln in label_name_to_id
+            }
+
+            # 現在のグループ所属ラベルを取得
+            current_labels = await group_repo.get_labels_for_group(current_group_id)
+            current_label_ids = {l.id for l in current_labels if l.id is not None}
+
+            # 差分更新（IDを直接渡す）
+            # 追加
+            for label_id in target_label_ids - current_label_ids:
+                await group_repo.add_label_to_group(current_group_id, label_id)
+
+            # 削除
+            for label_id in current_label_ids - target_label_ids:
+                await group_repo.remove_label_from_group(current_group_id, label_id)
+
+        return search_schema.GeneralSuccessResponse(success=True)
+
+    except Exception as e:
+        log.error("An error occurred", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")

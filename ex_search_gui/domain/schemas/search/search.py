@@ -184,10 +184,14 @@ class GroupingLabelsRequest(BaseModel):
     groups_init: list[str] = Field(default_factory=list)
     auto_create_new_groups: bool = True
     segment_split_enabled: bool = True
-    segment_delimiters: str = r"[_-]"
-    min_segment_match: int = 1
+    segment_delimiters: str = r"[_]"
+    min_segment_match: int = 2
     dict_category_enable: bool = True
 
 
 class GroupingLabelsResponse(BaseModel):
     groups: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class ApplyGroupingRequest(BaseModel):
+    groups: dict[str, list[str]]

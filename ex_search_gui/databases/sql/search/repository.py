@@ -1,8 +1,10 @@
 import re
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, bindparam
-from typing import List, Optional
+from sqlalchemy.orm import selectinload
+
 
 from domain.models.search import (
     search as m_search,
@@ -203,13 +205,21 @@ class GroupRepository(search_repo.GroupRepository):
         result = await self.session.get(m_search.Group, group_id)
         return result
 
-    async def get_all_groups(self) -> List[m_search.Group]:
+    async def get_all_groups(self, load_labels: bool = False) -> List[m_search.Group]:
         """
         すべてのグループを取得
         Returns:
             すべてのGroupインスタンスのリスト
         """
         statement = select(m_search.Group)
+        if load_labels:
+            # 中間テーブルとその先のラベルを一括ロード
+            statement = statement.options(
+                selectinload(m_search.Group.labels_link).selectinload(
+                    m_search.GroupLabelLink.label
+                )
+            )
+
         result = await self.session.execute(statement)
         return result.scalars().all()
 

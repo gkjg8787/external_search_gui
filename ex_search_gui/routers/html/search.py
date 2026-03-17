@@ -555,7 +555,41 @@ async def read_labels_auto_create(request: Request):
     """
     ラベル自動作成ページを表示する
     """
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        caller_type=CALLER_TYPE,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html auto_create called")
     return templates.TemplateResponse(
         request=request,
         name="search/label_auto_create.html",
+    )
+
+
+@router.get(
+    "/labels/grouping", response_class=HTMLResponse, name="read_labels_grouping"
+)
+async def read_labels_grouping(
+    request: Request,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """自動グループ化ページを表示"""
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        caller_type=CALLER_TYPE,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html grouping called")
+    group_repo = GroupRepository(db)
+    groups = await group_repo.get_all_groups()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="search/group_auto_create.html",
+        context={"groups": groups},
     )

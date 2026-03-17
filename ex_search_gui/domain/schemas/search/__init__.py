@@ -24,6 +24,7 @@ from .search import (
     GenerateLabelsRequest,
     GroupingLabelsRequest,
     GroupingLabelsResponse,
+    ApplyGroupingRequest,
 )
 
 __all__ = [
@@ -52,4 +53,5 @@ __all__ = [
     "GenerateLabelsRequest",
     "GroupingLabelsRequest",
     "GroupingLabelsResponse",
+    "ApplyGroupingRequest",
 ]
