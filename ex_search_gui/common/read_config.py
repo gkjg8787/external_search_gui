@@ -86,3 +86,7 @@ def get_databases():
 def get_log_options():
     lower_key_dict = to_lower_keys(settings.LOG_OPTIONS)
     return LogOptions(**lower_key_dict)
+
+
+def get_search_label_rules():
+    return settings.SEARCH_LABEL_RULES

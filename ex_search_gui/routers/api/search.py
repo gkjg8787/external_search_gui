@@ -17,8 +17,13 @@ from app.search.search_api import (
     get_product_via_api_for_preview,
     generate_download_config_via_api,
 )
-from app.label.add import SearchLabelDownLoadConfigTemplateService
-from app.label.create import create_labels
+from app.label import (
+    SearchLabelDownLoadConfigTemplateService,
+    create_labels,
+    organize_labels,
+)
+from common.read_config import get_search_label_rules
+
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -644,3 +649,45 @@ async def post_labels_batch(
         raise HTTPException(
             status_code=500, detail=f"Failed to register labels: {str(e)}"
         )
+
+
+@router.post("/labels/grouping", response_model=search_schema.GroupingLabelsResponse)
+async def post_labels_grouping(
+    request: Request,
+    groupingreq: search_schema.GroupingLabelsRequest,
+    ses: AsyncSession = Depends(get_async_session),
+):
+    """
+    labelをグループ化する
+    """
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api grouping labels called", groupingreq=groupingreq)
+    try:
+        repo = urlconfig_repo(ses)
+        labels = repo.get_all(command=search_command.SearchURLConfigCommand())
+        category_dict = (
+            get_search_label_rules() if groupingreq.dict_category_enable else {}
+        )
+        result = organize_labels(
+            labels=labels,
+            groups_init=groupingreq.groups_init,
+            auto_create_new_groups=groupingreq.auto_create_new_groups,
+            category_dict=category_dict,
+            segment_split_enabled=groupingreq.segment_split_enabled,
+            segment_delimiters=groupingreq.segment_delimiters,
+            min_segment_match=groupingreq.min_segment_match,
+        )
+        if result and result.get("groups"):
+            result = search_schema.GroupingLabelsResponse(groups=result["groups"])
+        else:
+            raise ValueError("Failed to organize labels")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to register labels: {str(e)}"
+        )
+    return result

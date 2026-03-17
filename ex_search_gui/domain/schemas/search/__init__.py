@@ -22,6 +22,8 @@ from .search import (
     DownloadConfigGenerateRequest,
     DownloadConfigGenerateResponse,
     GenerateLabelsRequest,
+    GroupingLabelsRequest,
+    GroupingLabelsResponse,
 )
 
 __all__ = [
@@ -48,4 +50,6 @@ __all__ = [
     "DownloadConfigGenerateRequest",
     "DownloadConfigGenerateResponse",
     "GenerateLabelsRequest",
+    "GroupingLabelsRequest",
+    "GroupingLabelsResponse",
 ]

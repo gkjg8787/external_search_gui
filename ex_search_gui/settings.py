@@ -33,3 +33,7 @@ HTML_OPTIONS = {
         "url": "http://localhost:8000/",
     },
 }
+SEARCH_LABEL_RULES = {
+    "PC": ["pc", "パソコン", "モニタ"],
+    "食品・飲料": ["食品", "菓子", "飲料", "ドリンク", "酒"],
+}
