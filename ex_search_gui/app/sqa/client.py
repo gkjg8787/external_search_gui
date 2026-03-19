@@ -10,12 +10,14 @@ from .models import (
     GenerateSearchURLRequest,
     GenerateSearchURLResponse,
     URLAnalysisModel,
+    GenerateSearchURLTemplateRequest,
 )
 
 
 API_OPTIONS = {
     "probe": {"path": "/searchurl/probe", "method": "post"},
     "generate": {"path": "/searchurl/generate", "method": "post"},
+    "partial_generate": {"path": "/searchurl/template/generate", "method": "post"},
 }
 
 
@@ -68,6 +70,28 @@ async def generate_url(
     data = GenerateSearchURLRequest(
         url_info=url_info,
         search_keyword=search_keyword,
+        category_value=category_value,
+        category_name=category_name,
+    ).model_dump(mode="json", exclude_unset=True)
+
+    ok, msg, result = await _get_api_result(
+        url=api_url, method=method, timeout=timeout, data=data
+    )
+    if not ok:
+        return ok, msg
+    res_model = GenerateSearchURLResponse(**result)
+    return True, res_model
+
+
+async def generate_url_template(
+    url_info: URLAnalysisModel, category_value: str, category_name: str
+):
+    opts = get_api_options()
+    api_url = urljoin(opts.url_generate.url, API_OPTIONS["partial_generate"]["path"])
+    timeout = opts.url_generate.timeout
+    method = API_OPTIONS["partial_generate"]["method"]
+    data = GenerateSearchURLTemplateRequest(
+        url_info=url_info,
         category_value=category_value,
         category_name=category_name,
     ).model_dump(mode="json", exclude_unset=True)

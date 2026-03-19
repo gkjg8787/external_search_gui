@@ -11,6 +11,7 @@ from domain.schemas.search import (
 )
 from domain.models.search import search as search_model
 from app.sqa.models import SearchURLProbeResponse
+from app.sqa import client as sqa_client
 
 log = structlog.get_logger(__name__)
 
@@ -60,8 +61,22 @@ async def create_labels(
     if probe_result.categories and "{category}" in url_info.url_template:
         for option in probe_result.categories.options:
             if option.value:
-                new_template = url_info.url_template.replace("{category}", option.value)
-                url_templates_with_category.append((new_template, option.text))
+                ok, temp_res = await sqa_client.generate_url_template(
+                    url_info=url_info,
+                    category_value=option.value,
+                    category_name=option.text,
+                )
+                if ok and temp_res.url:
+                    url_templates_with_category.append((temp_res.url, option.text))
+                else:
+                    if isinstance(temp_res, str):
+                        error = temp_res
+                    else:
+                        error = temp_res.model_dump()
+                    log.warning(
+                        "Failed to generate URL template with category.",
+                        error=error,
+                    )
     else:
         url_templates_with_category.append((url_info.url_template, None))
 

@@ -84,3 +84,10 @@ class GenerateSearchURLResponse(BaseModel):
         max_length=500,
     )
     error: ErrorDetail | None = None
+
+
+class GenerateSearchURLTemplateRequest(BaseModel):
+    url_info: URLAnalysisModel
+    search_keyword: str | None = None
+    category_value: Optional[str] = None
+    category_name: Optional[str] = None
