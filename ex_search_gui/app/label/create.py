@@ -60,23 +60,22 @@ async def create_labels(
     url_templates_with_category: list[tuple[str, str | None]] = []
     if probe_result.categories and "{category}" in url_info.url_template:
         for option in probe_result.categories.options:
-            if option.value:
-                ok, temp_res = await sqa_client.generate_url_template(
-                    url_info=url_info,
-                    category_value=option.value,
-                    category_name=option.text,
-                )
-                if ok and temp_res.url:
-                    url_templates_with_category.append((temp_res.url, option.text))
+            ok, temp_res = await sqa_client.generate_url_template(
+                url_info=url_info,
+                category_value=option.value,
+                category_name=option.text,
+            )
+            if ok and temp_res.url:
+                url_templates_with_category.append((temp_res.url, option.text))
+            else:
+                if isinstance(temp_res, str):
+                    error = temp_res
                 else:
-                    if isinstance(temp_res, str):
-                        error = temp_res
-                    else:
-                        error = temp_res.model_dump()
-                    log.warning(
-                        "Failed to generate URL template with category.",
-                        error=error,
-                    )
+                    error = temp_res.model_dump()
+                log.warning(
+                    "Failed to generate URL template with category.",
+                    error=error,
+                )
     else:
         url_templates_with_category.append((url_info.url_template, None))
 
