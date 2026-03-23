@@ -71,6 +71,11 @@
             gap: 15px;
             margin-top: 15px;
         }
+        .result-cards-title {
+            border-bottom: 2px solid #333;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
         .result-card {
             border: 1px solid #ccc;
             border-radius: 8px;
@@ -125,6 +130,7 @@
 
         @media (prefers-color-scheme: dark) {
             .result-card { background-color: #2d2d2d; border-color: #555; }
+            .result-cards-title { border-bottom: 2px solid #ccc; }
             .labels-container { border-color: #555; }
         }
     </style>
@@ -260,16 +266,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4. 検索結果からカードHTMLを生成する関数
     function createResultCards(searchResults, titlePrefix) {
         if (!searchResults) {
-            return `<h3>${titlePrefix}</h3><p>結果がありませんでした。</p>`;
+            return `<h3 class="result-cards-title">${titlePrefix}</h3><p>結果がありませんでした。</p>`;
         }
         if (searchResults.error_msg) {
-            return `<h3>${titlePrefix}</h3><p><strong style="color: red;">エラー:</strong> ${searchResults.error_msg}</p>`;
+            return `<h3 class="result-cards-title">${titlePrefix}</h3><p><strong style="color: red;">エラー:</strong> ${searchResults.error_msg}</p>`;
         }
         if (!searchResults.results || searchResults.results.length === 0) {
-            return `<h3>${titlePrefix}</h3><p>取得データなし</p>`;
+            return `<h3 class="result-cards-title">${titlePrefix}</h3><p>取得データなし</p>`;
         }
 
-        let html = `<h3>${titlePrefix}</h3><div class="result-cards-container">`;
+        let html = `<h3 class="result-cards-title">${titlePrefix}</h3><div class="result-cards-container">`;
         for (const item of searchResults.results) {
             const title = item.title || 'タイトルなし';
             const condition = item.condition ? ` ${item.condition}` : '';

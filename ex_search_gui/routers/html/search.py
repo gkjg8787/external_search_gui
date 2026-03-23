@@ -43,7 +43,7 @@ CALLER_TYPE = "html.search"
 async def read_search(
     request: Request,
     db: AsyncSession = Depends(get_async_session),
-    group_id: str = Query(default=""),
+    group_id: str | None = Query(default=None),
 ):
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(
@@ -52,6 +52,12 @@ async def read_search(
     )
     log = structlog.get_logger(__name__)
     log.info("html search called", group_id=group_id)
+    if group_id is None:
+        if request.cookies.get("init_group_id"):
+            group_id = request.cookies.get("init_group_id")
+            log.info("init_group_id found", group_id=group_id)
+        else:
+            group_id = ""
 
     # グループ一覧を取得
     group_repo = GroupRepository(db)
@@ -547,6 +553,28 @@ async def edit_group(  # グループ編集ページ
     context = {"group": group}
     return templates.TemplateResponse(
         request=request, name="search/group_edit.html", context=context
+    )
+
+
+@router.get("/groups/config/", response_class=HTMLResponse)
+async def read_groups_config(
+    request: Request, db: AsyncSession = Depends(get_async_session)
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        caller_type=CALLER_TYPE,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html groups config called")
+
+    repo = GroupRepository(db)
+    groups = await repo.get_all_groups()
+
+    context = {"groups": groups}
+    return templates.TemplateResponse(
+        request=request, name="search/group_config.html", context=context
     )
 
 

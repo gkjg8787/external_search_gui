@@ -12,6 +12,7 @@
         .btn-danger { background-color: #dc3545; }
         .btn-danger:hover { background-color: #c82333; }
         .btn-search { background-color: #007bff; }
+        .btn-config { background-color: #ffc107; color: #212529; }
         .btn-searchlabels { background-color:#6f42c1; }
         .btn-searchlabels:hover { background-color:#5936a2; }
         .btn-secondary { background-color: #6c757d; }
@@ -36,6 +37,7 @@
     <div class="action-bar">
         <a href="{{ url_for('read_groups_add') }}" class="btn btn-add">新規グループ追加</a>
         <a href="{{ url_for('read_labels_grouping') }}" class="btn btn-secondary">自動グループ化</a>
+        <a href="{{ url_for('read_groups_config') }}" class="btn btn-config">グループ設定</a>
         <a href="{{ url_for('read_search') }}" class="btn btn-search">ラベルで検索</a>
         <a href="{{ url_for('read_labels') }}" class="btn btn-searchlabels">検索ラベル一覧へ</a>
     </div>
