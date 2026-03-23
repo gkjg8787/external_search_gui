@@ -4,8 +4,15 @@ import re
 from urllib.parse import urlencode, urlparse
 
 from typing import Optional
-from fastapi import APIRouter, Request, Depends, Form, status, HTTPException, Query
-from fastapi.responses import HTMLResponse
+from fastapi import (
+    APIRouter,
+    Request,
+    Depends,
+    Form,
+    status,
+    HTTPException,
+    Query,
+)
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
@@ -52,30 +59,48 @@ async def read_search(
     )
     log = structlog.get_logger(__name__)
     log.info("html search called", group_id=group_id)
-    if group_id is None:
-        if request.cookies.get("init_group_id"):
-            group_id = request.cookies.get("init_group_id")
-            log.info("init_group_id found", group_id=group_id)
-        else:
-            group_id = ""
 
-    # グループ一覧を取得
     group_repo = GroupRepository(db)
     groups = await group_repo.get_all_groups()
 
-    # ラベル一覧を取得
     labels_repo = SearchURLConfigRepositorySQL(db)
-    try:
-        group_id_int = int(group_id)
-    except ValueError:
-        group_id_int = None
-    if group_id_int:
-        # グループが選択されている場合は、そのグループに所属するラベルを取得
-        labels = await group_repo.get_labels_for_group(group_id_int)
-    else:
-        # グループが選択されていない場合は、すべてのラベルを取得
-        labels = await labels_repo.get_all(search_command.SearchURLConfigCommand())
 
+    if group_id is not None:
+        raw_id = group_id
+    else:
+        raw_id = request.cookies.get("init_group_id")
+    group_id_int = None
+
+    delete_init_group_id = False
+
+    if raw_id:
+        try:
+            group_id_int = int(raw_id)
+        except ValueError:
+            # 数値変換できない場合はクッキーを削除
+            delete_init_group_id = True
+
+    labels = []
+    if group_id_int:
+        # IDに該当するグループがDBに存在するか確認
+        # ※ groups リストから探すことでDBへの再問合せを減らすことも可能
+        target_group = next((g for g in groups if g.id == group_id_int), None)
+
+        if target_group:
+            # グループが存在すれば、ラベルを取得（0件でもOK）
+            labels = await group_repo.get_labels_for_group(group_id_int)
+            if group_id is None:
+                log.info("init_group_id applied", group_id=group_id_int)
+        else:
+            # グループが存在しない（削除済みなど）場合
+            if request.cookies.get("init_group_id"):
+                delete_init_group_id = True
+
+            group_id_int = None  # クエリ引数が無効だった場合は全件表示へ
+
+    # グループ指定がない、または無効だった場合は全ラベル取得
+    if group_id_int is None:
+        labels = await labels_repo.get_all(search_command.SearchURLConfigCommand())
     context = {"groups": groups, "labels": labels, "selected_group_id": group_id_int}
 
     html_opts = get_html_options()
@@ -95,11 +120,15 @@ async def read_search(
     except Exception:
         context["kakakuscraping"] = {"enabled": False}
 
-    return templates.TemplateResponse(
+    res = templates.TemplateResponse(
         request=request,
         name="search/label_search.html",
         context=context,
     )
+    if delete_init_group_id:
+        res.delete_cookie("init_group_id")
+
+    return res
 
 
 @router.get("/labels/", response_class=HTMLResponse)
