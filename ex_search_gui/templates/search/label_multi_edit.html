@@ -37,6 +37,34 @@
         }
         .delete-btn:hover { background-color: #c9302c; }
         .back-link { text-decoration: none; color: #337ab7; font-size: 16px; }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1e1e1e;
+                color: #e0e0e0;
+            }
+            .label-list {
+                border-top-color: #444;
+            }
+            .label-item {
+                border-bottom-color: #444;
+            }
+            .label-summary span {
+                color: #aaa !important;
+            }
+            .label-details {
+                color: #bbb;
+            }
+            .label-details pre {
+                background-color: #2c2c2c;
+                color: #f0f0f0;
+                padding: 10px;
+                border-radius: 4px;
+                border: 1px solid #444;
+            }
+            .footer-menu { background: #2d2d2d; border-top-color: #555; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
+            .back-link { color: #58a6ff; }
+        }
     </style>
 </head>
 <body>
