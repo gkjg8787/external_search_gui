@@ -195,3 +195,7 @@ class GroupingLabelsResponse(BaseModel):
 
 class ApplyGroupingRequest(BaseModel):
     groups: dict[str, list[str]]
+
+
+class BatchDeleteRequest(BaseModel):
+    ids: list[int]

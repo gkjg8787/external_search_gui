@@ -25,6 +25,7 @@ from .search import (
     GroupingLabelsRequest,
     GroupingLabelsResponse,
     ApplyGroupingRequest,
+    BatchDeleteRequest,
 )
 
 __all__ = [
@@ -54,4 +55,5 @@ __all__ = [
     "GroupingLabelsRequest",
     "GroupingLabelsResponse",
     "ApplyGroupingRequest",
+    "BatchDeleteRequest",
 ]

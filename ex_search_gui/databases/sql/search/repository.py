@@ -2,7 +2,7 @@ import re
 from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, bindparam
+from sqlalchemy import select, bindparam, delete
 from sqlalchemy.orm import selectinload
 
 
@@ -74,6 +74,14 @@ class SearchURLConfigRepositorySQL(search_repo.SearchURLConfigRepository):
         await ses.delete(db_config)
         await ses.commit()
         return
+
+    async def delete_by_ids(self, ids: list[int]):
+        ses = self.session
+        stmt = delete(m_search.SearchURLConfig).where(
+            m_search.SearchURLConfig.id.in_(ids)
+        )
+        await ses.execute(stmt)
+        await ses.commit()
 
 
 class ProductPageConfigRepositorySQL(search_repo.ProductPageConfigRepository):

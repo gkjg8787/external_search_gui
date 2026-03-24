@@ -152,6 +152,27 @@ async def read_labels(
     )
 
 
+@router.get("/labels/multi_edit/", response_class=HTMLResponse)
+async def read_labels_multi_edit(
+    request: Request,
+    db: AsyncSession = Depends(get_async_session),
+    label: str | None = Query(default=None),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("html labels multi edit called", label=label)
+    service = SearchLabelViewTemplateService(db_session=db, label=label)
+    labels = await service.execute(label=label)
+    context = labels.model_dump() | {"label": label}
+    return templates.TemplateResponse(
+        request=request, name="search/label_multi_edit.html", context=context
+    )
+
+
 @router.get("/labels/add/", response_class=HTMLResponse)
 async def read_labels_add(
     request: Request,

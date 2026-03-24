@@ -21,6 +21,10 @@ class SearchURLConfigRepository(ABC):
     async def delete_by_id(self, id: int):
         pass
 
+    @abstractmethod
+    async def delete_by_ids(self, ids: list[int]):
+        pass
+
 
 class ProductPageConfigRepository(ABC):
     @abstractmethod

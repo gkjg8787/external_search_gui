@@ -29,6 +29,7 @@
         }
         .btn-add { background-color: #28a745; padding: 8px 15px; }
         .btn-edit { background-color: #17a2b8; }
+        .btn-multi-edit { background-color: #fd7e14; }
         .btn-config { background-color: #ffc107; color: #212529; }
         .btn-delete { background-color: #dc3545; }
         .btn-search { background-color: #007bff; }
@@ -46,6 +47,7 @@
     <div class="menu-container">
         <a href="{{ url_for('read_labels_auto_create') }}" class="btn btn-config">自動作成</a>
         <a href="{{ url_for('read_labels_add') }}" class="btn btn-add">新規追加</a>
+        <a href="{{ url_for('read_labels_multi_edit')}}" class="btn btn-multi-edit">一括編集</a>
         <a href="{{ url_for('read_search') }}" class="btn btn-search">ラベルで検索</a>
         <a href="{{ url_for('read_product_labels')}}" class="btn btn-product-labels">商品ページラベル一覧</a>
         <a href="{{ url_for('read_groups')}}" class="btn btn-group">グループ一覧</a>

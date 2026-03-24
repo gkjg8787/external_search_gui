@@ -159,6 +159,23 @@ async def delete_label(
     return search_schema.SearchURLConfigResponse(success=True)
 
 
+@router.delete("/labels/batch", response_model=search_schema.GeneralSuccessResponse)
+async def delete_labels_batch(
+    request: Request,
+    delete_req: search_schema.BatchDeleteRequest,
+    db: AsyncSession = Depends(get_async_session),
+):
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api label batch delete called", ids=delete_req.ids)
+    await urlconfig_repo(db).delete_by_ids(delete_req.ids)
+    return search_schema.GeneralSuccessResponse(success=True)
+
+
 @router.get("/labels/config/template/", response_model=dict)
 async def get_label_config_template(
     request: Request,
