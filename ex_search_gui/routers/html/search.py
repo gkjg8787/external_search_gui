@@ -526,9 +526,9 @@ async def confirm_product_label_creation(
     # ラベルが存在しない場合、作成確認ページを表示
     log.info("Label does not exist. Showing creation confirmation page.")
     return templates.TemplateResponse(
-        "search/product_label_creation_confirm.html",
-        {
-            "request": request,
+        request=request,
+        name="search/product_label_creation_confirm.html",
+        context={
             "form_data": form_data,
             "add_label_action": request.url_for("read_product_labels_add_confirm"),
             "watch_only_action": s2k_utils.get_url_link("url_add"),
@@ -566,7 +566,9 @@ async def read_labels_multi_update(
             search_command.SearchURLConfigCommand(id=label_id)
         )
         if db_configs:
-            selected_labels.append(SearchURLConfigSchema.model_validate(db_configs[0]))
+            selected_labels.append(
+                SearchURLConfigSchema.model_validate(db_configs[0].model_dump())
+            )
 
     if not selected_labels:
         raise HTTPException(
@@ -579,12 +581,12 @@ async def read_labels_multi_update(
     ].annotation.__args__
 
     context = {
-        "request": request,
         "selected_label_ids": ids,  # カンマ区切り文字列としてテンプレートに渡す
         "selected_labels": selected_labels,
         "download_type_options": download_type_options,
     }
     return templates.TemplateResponse(
+        request=request,
         name="search/label_multi_update.html",
         context=context,
     )
