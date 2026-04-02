@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}検索ラベル一括編集{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">検索ラベル一括編集</h1>
+
+    <form action="{{ url_for('post_labels_multi_update') }}" method="post" id="batchUpdateForm">
+        <input type="hidden" name="ids" value="{{ selected_label_ids }}">
+
+        <div class="card mb-4">
+            <div class="card-header">
+                編集項目
+            </div>
+            <div class="card-body">
+                <p class="text-muted">チェックした項目のみが更新されます。</p>
+
+                <div class="mb-3 row align-items-center">
+                    <div class="col-auto">
+                        <input type="checkbox" class="form-check-input" id="update_base_url" name="update_base_url">
+                    </div>
+                    <label for="base_url" class="col-sm-2 col-form-label">ベースURL</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" id="base_url" name="base_url" placeholder="例: https://www.example.com/search">
+                    </div>
+                </div>
+
+                <div class="mb-3 row align-items-center">
+                    <div class="col-auto">
+                        <input type="checkbox" class="form-check-input" id="update_query" name="update_query">
+                    </div>
+                    <label for="query" class="col-sm-2 col-form-label">クエリ</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" id="query" name="query" placeholder="例: q">
+                    </div>
+                </div>
+
+                <div class="mb-3 row align-items-center">
+                    <div class="col-auto">
+                        <input type="checkbox" class="form-check-input" id="update_query_encoding" name="update_query_encoding">
+                    </div>
+                    <label for="query_encoding" class="col-sm-2 col-form-label">クエリエンコーディング</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" id="query_encoding" name="query_encoding" value="utf-8" placeholder="例: utf-8">
+                    </div>
+                </div>
+
+                <div class="mb-3 row align-items-center">
+                    <div class="col-auto">
+                        <input type="checkbox" class="form-check-input" id="update_download_type" name="update_download_type">
+                    </div>
+                    <label for="download_type" class="col-sm-2 col-form-label">ダウンロードタイプ</label>
+                    <div class="col-sm-9">
+                        <select class="form-select" id="download_type" name="download_type">
+                            <option value="">選択してください</option>
+                            {% for option in download_type_options %}
+                            <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3 row align-items-start">
+                    <div class="col-auto mt-2">
+                        <input type="checkbox" class="form-check-input" id="update_download_config" name="update_download_config">
+                    </div>
+                    <label for="download_config" class="col-sm-2 col-form-label">ダウンロード設定 (JSON)</label>
+                    <div class="col-sm-9">
+                        <textarea class="form-control" id="download_config" name="download_config" rows="10" placeholder='例: {"sitename": "example", "label": "example_label"}'></textarea>
+                        <small class="form-text text-muted">有効なJSON形式で入力してください。</small>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('read_labels_multi_edit') }}" class="btn btn-secondary">キャンセル</a>
+                    <button type="submit" class="btn btn-primary" id="batchUpdateButton">一括更新</button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <h2 class="mt-5 mb-3">選択された検索ラベル ({{ selected_labels|length }} 件)</h2>
+    <div id="selectedLabelsList">
+        {% for label in selected_labels %}
+        <div class="card mb-2">
+            <div class="card-header d-flex justify-content-between align-items-center" id="heading{{ loop.index }}">
+                <h5 class="mb-0">
+                    <button class="btn btn-link text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
+                        <i class="bi bi-chevron-down"></i> {{ label.label_name }} (ID: {{ label.id }})
+                    </button>
+                </h5>
+            </div>
+            <div id="collapse{{ loop.index }}" class="collapse" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#selectedLabelsList">
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">ID:</dt>
+                        <dd class="col-sm-9">{{ label.id }}</dd>
+
+                        <dt class="col-sm-3">ラベル名:</dt>
+                        <dd class="col-sm-9">{{ label.label_name }}</dd>
+
+                        <dt class="col-sm-3">ベースURL:</dt>
+                        <dd class="col-sm-9">{{ label.base_url }}</dd>
+
+                        <dt class="col-sm-3">クエリ:</dt>
+                        <dd class="col-sm-9">{{ label.query }}</dd>
+
+                        <dt class="col-sm-3">クエリエンコーディング:</dt>
+                        <dd class="col-sm-9">{{ label.query_encoding }}</dd>
+
+                        <dt class="col-sm-3">ダウンロードタイプ:</dt>
+                        <dd class="col-sm-9">{{ label.download_type }}</dd>
+
+                        <dt class="col-sm-3">ダウンロード設定:</dt>
+                        <dd class="col-sm-9">
+                            <pre class="bg-light p-2 rounded">{{ label.download_config | tojson_japanese(indent=2) }}</pre>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const batchUpdateForm = document.getElementById('batchUpdateForm');
+        const batchUpdateButton = document.getElementById('batchUpdateButton');
+        const checkboxes = batchUpdateForm.querySelectorAll('input[type="checkbox"][name^="update_"]');
+
+        batchUpdateButton.addEventListener('click', function(event) {
+            let anyCheckboxChecked = false;
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    anyCheckboxChecked = true;
+                }
+            });
+
+            if (!anyCheckboxChecked) {
+                event.preventDefault(); // フォーム送信を阻止
+                alert('更新する項目を一つ以上チェックしてください。');
+            }
+        });
+
+        // チェックボックスの状態に応じて入力フィールドを有効/無効にする
+        checkboxes.forEach(checkbox => {
+            const targetInputId = checkbox.id.replace('update_', '');
+            const targetInput = document.getElementById(targetInputId);
+            if (targetInput) {
+                targetInput.disabled = !checkbox.checked; // 初期状態
+                checkbox.addEventListener('change', function() {
+                    targetInput.disabled = !this.checked;
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

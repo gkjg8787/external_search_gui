@@ -800,3 +800,60 @@ async def apply_grouping(
     except Exception as e:
         log.error("An error occurred", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+
+
+@router.put("/labels/batch/update", response_model=search_schema.GeneralSuccessResponse)
+async def batch_update_labels(
+    request: Request,
+    update_req: search_schema.BatchUpdateSearchURLConfigRequest,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    複数の検索ラベル設定を一括で更新する
+    リクエストボディで指定されたIDのラベルに対し、Noneでないフィールドのみを更新する。
+    """
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        router_path=request.url.path,
+        request_id=str(uuid.uuid4()),
+    )
+    log = structlog.get_logger(__name__)
+    log.info("api batch update labels called", update_req=update_req)
+
+    if not update_req.ids:
+        raise HTTPException(status_code=400, detail="No label IDs provided for update.")
+
+    repo = urlconfig_repo(db)
+    labels_to_save = []
+
+    for label_id in update_req.ids:
+        # 既存のラベルを取得
+        db_configs = await repo.get_all(
+            search_command.SearchURLConfigCommand(id=label_id)
+        )
+        if not db_configs:
+            log.warning(
+                "Label not found for batch update, skipping.", label_id=label_id
+            )
+            continue
+
+        db_config = db_configs[0]  # IDはユニークであると仮定
+
+        # リクエストで指定された（Noneでない）フィールドのみを更新
+        if update_req.base_url is not None:
+            db_config.base_url = update_req.base_url
+        if update_req.query is not None:
+            db_config.query = update_req.query
+        if update_req.query_encoding is not None:
+            db_config.query_encoding = update_req.query_encoding
+        if update_req.download_type is not None:
+            db_config.download_type = update_req.download_type
+        if update_req.download_config is not None:
+            db_config.download_config = update_req.download_config
+
+        labels_to_save.append(db_config)
+
+    if labels_to_save:
+        await repo.save_all(labels_to_save)
+
+    return search_schema.GeneralSuccessResponse(success=True)

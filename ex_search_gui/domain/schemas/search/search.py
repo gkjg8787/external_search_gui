@@ -199,3 +199,21 @@ class ApplyGroupingRequest(BaseModel):
 
 class BatchDeleteRequest(BaseModel):
     ids: list[int]
+
+
+class BatchUpdateSearchURLConfigRequest(BaseModel):
+    """
+    複数のSearchURLConfigを一括更新するためのリクエストスキーマ。
+    Noneでないフィールドのみが更新対象となる。
+    """
+
+    ids: list[int] = Field(..., description="更新対象のSearchURLConfigのIDリスト")
+    base_url: Optional[str] = Field(None, description="更新するベースURL")
+    query: Optional[str] = Field(None, description="更新するクエリパラメータ名")
+    query_encoding: Optional[str] = Field(
+        None, description="更新するクエリエンコーディング"
+    )
+    download_type: Optional[str] = Field(None, description="更新するダウンロードタイプ")
+    download_config: Optional[dict[str, Any]] = Field(
+        None, description="更新するダウンロード設定 (JSON形式)"
+    )
