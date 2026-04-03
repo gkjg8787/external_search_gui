@@ -149,6 +149,10 @@
 
                 if (response.ok) {
                     alert('削除しました');
+                    // 削除成功後、チェックボックスをクリアしてフッターを非表示にする
+                    document.querySelectorAll('.label-checkbox').forEach(cb => cb.checked = false);
+                    updateFooter();
+
                     window.location.reload();
                 } else {
                     const data = await response.json();
