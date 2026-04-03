@@ -38,7 +38,7 @@
         </div>
         <h1 class="mb-4">検索ラベル一括編集</h1>
 
-        <form action="{{ url_for('post_labels_multi_update') }}" method="post" id="batchUpdateForm">
+        <form id="batchUpdateForm">
             <input type="hidden" name="ids" value="{{ selected_label_ids }}">
 
             <div class="card mb-4">
@@ -106,7 +106,7 @@
 
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{{ url_for('read_labels_multi_edit') }}" class="btn btn-secondary">キャンセル</a>
-                        <button type="submit" class="btn btn-primary" id="batchUpdateButton">一括更新</button>
+                        <button type="button" class="btn btn-primary" id="batchUpdateButton" onclick="submitBatchUpdate()">一括更新</button>
                     </div>
                 </div>
             </div>
@@ -159,36 +159,93 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const batchUpdateForm = document.getElementById('batchUpdateForm');
-            const batchUpdateButton = document.getElementById('batchUpdateButton');
-            const checkboxes = batchUpdateForm.querySelectorAll('input[type="checkbox"][name^="update_"]');
-
-            batchUpdateButton.addEventListener('click', function(event) {
-                let anyCheckboxChecked = false;
-                checkboxes.forEach(checkbox => {
-                    if (checkbox.checked) {
-                        anyCheckboxChecked = true;
-                    }
-                });
-
-                if (!anyCheckboxChecked) {
-                    event.preventDefault(); // フォーム送信を阻止
-                    alert('更新する項目を一つ以上チェックしてください。');
-                }
-            });
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="update_"]');
 
             // チェックボックスの状態に応じて入力フィールドを有効/無効にする
             checkboxes.forEach(checkbox => {
                 const targetInputId = checkbox.id.replace('update_', '');
                 const targetInput = document.getElementById(targetInputId);
                 if (targetInput) {
-                    targetInput.disabled = !checkbox.checked; // 初期状態
+                    targetInput.disabled = !checkbox.checked;
                     checkbox.addEventListener('change', function() {
                         targetInput.disabled = !this.checked;
                     });
                 }
             });
         });
+
+        async function submitBatchUpdate() {
+            const batchUpdateButton = document.getElementById('batchUpdateButton');
+            const idsStr = document.querySelector('input[name="ids"]').value;
+            const ids = idsStr.split(',').map(i => parseInt(i.trim())).filter(i => !isNaN(i));
+
+            if (ids.length === 0) {
+                alert('更新対象のIDが見つかりません。');
+                return;
+            }
+
+            const payload = { ids: ids };
+            const updateCheckboxes = document.querySelectorAll('input[type="checkbox"][id^="update_"]');
+            let hasUpdate = false;
+
+            for (const checkbox of updateCheckboxes) {
+                if (checkbox.checked) {
+                    hasUpdate = true;
+                    const fieldName = checkbox.id.replace('update_', '');
+                    const input = document.getElementById(fieldName);
+                    
+                    if (fieldName === 'download_config') {
+                        try {
+                            let jsonStr = input.value.trim();
+                            if (jsonStr) {
+                                // JSONの末尾カンマを削除する正規表現
+                                const pattern = /,(\s*[}\]])/g;
+                                jsonStr = jsonStr.replace(pattern, "$1");
+                                payload[fieldName] = JSON.parse(jsonStr);
+                            } else {
+                                payload[fieldName] = {};
+                            }
+                        } catch (e) {
+                            alert('ダウンロード設定が有効なJSON形式ではありません。');
+                            return;
+                        }
+                    } else {
+                        payload[fieldName] = input.value;
+                    }
+                }
+            }
+
+            if (!hasUpdate) {
+                alert('更新する項目を一つ以上チェックしてください。');
+                return;
+            }
+
+            batchUpdateButton.disabled = true;
+            const originalText = batchUpdateButton.textContent;
+            batchUpdateButton.textContent = '更新中...';
+
+            try {
+                const response = await fetch("{{ url_for('batch_update_labels') }}", {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert('一括更新が完了しました。');
+                    window.location.href = "{{ url_for('read_labels') }}";
+                } else {
+                    const errorData = await response.json();
+                    alert('更新に失敗しました: ' + (errorData.detail || '不明なエラーが発生しました。'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('サーバーとの通信中にエラーが発生しました。');
+            } finally {
+                batchUpdateButton.disabled = false;
+                batchUpdateButton.textContent = originalText;
+            }
+        }
     </script>
 </body>
 </html>

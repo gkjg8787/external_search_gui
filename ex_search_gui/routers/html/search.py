@@ -3,7 +3,6 @@ import json
 import re
 from urllib.parse import urlencode, urlparse
 
-from typing import Optional
 from fastapi import (
     APIRouter,
     Request,
@@ -31,7 +30,6 @@ from domain.schemas.search.search import (
     SearchURLConfigSchema,
     SearchURLConfigPreviewRequest,
     ProductPageConfig,
-    BatchUpdateSearchURLConfigRequest,  # 追加
     ProductPageConfigPreviewRequest,
 )
 from domain.schemas.search.html import (
@@ -589,87 +587,6 @@ async def read_labels_multi_update(
         request=request,
         name="search/label_multi_update.html",
         context=context,
-    )
-
-
-@router.post("/labels/multi_update/", response_class=RedirectResponse)
-async def post_labels_multi_update(
-    request: Request,
-    db: AsyncSession = Depends(get_async_session),
-    selected_label_ids: str = Form(..., alias="ids"),  # フォームからの隠し入力
-    update_base_url: Optional[str] = Form(None),
-    base_url: Optional[str] = Form(None),
-    update_query: Optional[str] = Form(None),
-    query: Optional[str] = Form(None),
-    update_query_encoding: Optional[str] = Form(None),
-    query_encoding: Optional[str] = Form(None),
-    update_download_type: Optional[str] = Form(None),
-    download_type: Optional[str] = Form(None),
-    update_download_config: Optional[str] = Form(None),
-    download_config: Optional[str] = Form(None),
-):
-    """
-    一括編集フォームの送信を処理し、APIを呼び出す
-    """
-    structlog.contextvars.clear_contextvars()
-    structlog.contextvars.bind_contextvars(
-        router_path=request.url.path,
-        request_id=str(uuid.uuid4()),
-    )
-    log = structlog.get_logger(__name__)
-    log.info("html labels multi update form submitted")
-
-    label_ids = [int(i) for i in selected_label_ids.split(",") if i.strip().isdigit()]
-    if not label_ids:
-        raise HTTPException(
-            status_code=400, detail="No valid label IDs provided for update."
-        )
-
-    update_payload = BatchUpdateSearchURLConfigRequest(ids=label_ids)
-
-    # 対応するチェックボックスがONの場合のみ、ペイロードにフィールドを設定
-    if update_base_url == "on" and base_url is not None:
-        update_payload.base_url = base_url
-    if update_query == "on" and query is not None:
-        update_payload.query = query
-    if update_query_encoding == "on" and query_encoding is not None:
-        update_payload.query_encoding = query_encoding
-    if update_download_type == "on" and download_type is not None:
-        update_payload.download_type = download_type
-    if update_download_config == "on" and download_config is not None:
-        try:
-            cleaned_json_str = download_config.strip()
-            if cleaned_json_str:
-                # label_add_confirm と同様のJSONクリーンアップロジックを適用
-                pattern = r",(\s*[}\]])"
-                cleaned_json_str = re.sub(pattern, r"\1", cleaned_json_str)
-                update_payload.download_config = json.loads(cleaned_json_str)
-            else:
-                update_payload.download_config = (
-                    {}
-                )  # チェックされていて空の場合、空の辞書として更新
-        except json.JSONDecodeError:
-            log.error(
-                "Invalid JSON for download_config in batch update",
-                download_config=download_config,
-            )
-            raise HTTPException(
-                status_code=400, detail="Invalid JSON format for Download Config."
-            )
-        except Exception as e:
-            log.error("Error processing download_config in batch update", exc_info=True)
-            raise HTTPException(
-                status_code=400, detail=f"Error processing Download Config: {str(e)}"
-            )
-
-    # APIエンドポイントを呼び出す
-    from routers.api.search import batch_update_labels as api_batch_update_labels
-
-    await api_batch_update_labels(request=request, update_req=update_payload, db=db)
-
-    # 成功後、ラベル一覧ページにリダイレクト
-    return RedirectResponse(
-        url=request.url_for("read_labels"), status_code=status.HTTP_302_FOUND
     )
 
 
