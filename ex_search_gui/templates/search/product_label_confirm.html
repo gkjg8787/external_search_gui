@@ -431,6 +431,7 @@
 
         } catch (error) {
             previewResultDiv.innerHTML = `<p style="color: red;">エラー: ${error.message}</p>`;
+            previewBtn.textContent = '再プレビュー';
         } finally {
             previewBtn.disabled = false;
         }
@@ -512,6 +513,9 @@
             showMessage(`エラー: ${error.message}`, 'error');
             window.scrollTo(0, 0);
             buttons.forEach(btn => btn.disabled = false); // エラー時はボタンを再度有効化
+            if (previewBtn.textContent === 'プレビュー実行中...') {
+                previewBtn.textContent = '再プレビュー';
+            }
         }
     }
 
