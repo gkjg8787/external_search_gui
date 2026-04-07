@@ -295,13 +295,14 @@
         }
 
         // download_configはJSON文字列からオブジェクトに変換
-        try {
-            // 空文字列の場合はパースしない
-            if (data.download_config && data.download_config.trim()) {
+        if (data.download_config && data.download_config.trim()) {
+            try {
                 data.download_config = JSON.parse(data.download_config);
+            } catch (e) {
+                console.error("Invalid JSON in download_config:", e);
+                throw new Error("ダウンロード設定が有効なJSON形式ではありません。");
             }
-        } catch (e) {
-            console.error("Invalid JSON in download_config:", e);
+        } else {
             data.download_config = {};
         }
 
@@ -409,9 +410,9 @@
 
         document.getElementById('preview-result-area').scrollIntoView({ behavior: 'smooth' });
 
-        const requestData = getFormData(true);
-
         try {
+            const requestData = getFormData(true);
+
             const response = await fetch("{{ url_for('post_product_page_config_preview') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -439,26 +440,25 @@
         const buttons = [previewBtn, registerBtn, registerWithPreviewBtn].filter(Boolean);
         buttons.forEach(btn => btn.disabled = true);
 
-        const requestData = getFormData(false);
-        // プレビュー用のキーは削除
-        delete requestData.learning_url;
-        delete requestData.target_urls;
-        delete requestData.keywords;
-
-        // "登録時に再作成フラグをOFFにする" チェックボックスの処理
-        const recreateParserOffFlag = document.getElementById('recreate-parser-off-flag').checked;
-        if (recreateParserOffFlag && requestData.download_config && requestData.download_config.recreate_parser === true) {
-            console.log("recreate_parser is being set to false.");
-            requestData.download_config.recreate_parser = false;
-        }
-
-
-        const url_update_template = "{{ url_for('update_product_page_label', id='__LABEL_ID__') }}";
-        const url = isEditMode ?  url_update_template.replace('__LABEL_ID__', requestData.id) : "{{ url_for('post_product_page_label') }}";
-        const method = isEditMode ? 'PUT' : 'POST';
-        const errorMessageBase = isEditMode ? '更新' : '登録';
-
         try {
+            const requestData = getFormData(false);
+            // プレビュー用のキーは削除
+            delete requestData.learning_url;
+            delete requestData.target_urls;
+            delete requestData.keywords;
+
+            // "登録時に再作成フラグをOFFにする" チェックボックスの処理
+            const recreateParserOffFlag = document.getElementById('recreate-parser-off-flag').checked;
+            if (recreateParserOffFlag && requestData.download_config && requestData.download_config.recreate_parser === true) {
+                console.log("recreate_parser is being set to false.");
+                requestData.download_config.recreate_parser = false;
+            }
+
+            const url_update_template = "{{ url_for('update_product_page_label', id='__LABEL_ID__') }}";
+            const url = isEditMode ?  url_update_template.replace('__LABEL_ID__', requestData.id) : "{{ url_for('post_product_page_label') }}";
+            const method = isEditMode ? 'PUT' : 'POST';
+            const errorMessageBase = isEditMode ? '更新' : '登録';
+
             const response = await fetch(url, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
