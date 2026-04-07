@@ -405,9 +405,7 @@ async def edit_product_label(
     log.info("html product label edit called", label_id=label_id)
 
     repo = ProductPageConfigRepositorySQL(db)
-    config = await repo.get_all(
-        search_command.ProductPageConfigCommand(label_id=label_id)
-    )
+    config = await repo.get_all(search_command.ProductPageConfigCommand(id=label_id))
     if not config:
         raise HTTPException(status_code=404, detail="Product label not found")
     if len(config) > 1:
