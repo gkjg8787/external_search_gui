@@ -416,7 +416,7 @@ async def edit_product_label(
     preview = ProductPageConfigPreviewRequest.model_validate(config.model_dump())
 
     context = ProductPageLabelPreviewContext(
-        preview=preview, is_edit_mode=False
+        preview=preview, is_edit_mode=True
     ).model_dump()
 
     return templates.TemplateResponse(
