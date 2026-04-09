@@ -63,6 +63,17 @@
             cursor: pointer; 
         }
         .delete-btn:hover { background-color: #c9302c; }
+        .clear-btn { 
+            background-color: #6c757d; 
+            color: white; 
+            padding: 10px 30px; 
+            border: none; 
+            border-radius: 4px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            margin-left: 10px;
+        }
+        .clear-btn:hover { background-color: #5a6268; }
         .back-link { text-decoration: none; color: #337ab7; font-size: 16px; }
 
         @media (prefers-color-scheme: dark) {
@@ -128,6 +139,7 @@
     <div id="footer-menu" class="footer-menu">
         <button class="edit-btn" onclick="editSelected()">選択したラベルを一括編集する</button>
         <button class="delete-btn" onclick="deleteSelected()">選択したラベルを削除する</button>
+        <button class="clear-btn" onclick="clearSelection()">選択をすべて解除する</button>
     </div>
 
     <script>
@@ -162,6 +174,11 @@
             const checkboxes = document.querySelectorAll('.label-checkbox:checked');
             const footer = document.getElementById('footer-menu');
             footer.style.display = checkboxes.length > 0 ? 'block' : 'none';
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.label-checkbox').forEach(cb => cb.checked = false);
+            updateFooter();
         }
 
         function editSelected() {
