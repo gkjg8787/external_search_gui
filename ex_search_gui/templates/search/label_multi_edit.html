@@ -110,10 +110,10 @@
     <h1>検索ラベル一括編集</h1>
     <div class="controls" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
         <a href="{{ url_for('read_labels') }}" class="back-link">&lt; ラベル一覧へ戻る</a>
-        <div class="search-box">
+        <form class="search-box" onsubmit="searchAndSelect(); return false;">
             <input type="text" id="filter-keyword" placeholder="ラベル名で一括選択">
-            <button type="button" class="btn-select" onclick="searchAndSelect()">検索して選択</button>
-        </div>
+            <button type="submit" class="btn-select">検索して選択</button>
+        </form>
     </div>
 
     <div class="label-list">
