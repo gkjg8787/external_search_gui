@@ -141,12 +141,20 @@
             if (!keyword) return;
 
             const items = document.querySelectorAll('.label-item');
+            let firstMatch = null;
+
             items.forEach(item => {
                 const labelName = item.querySelector('.label-summary').textContent.toLowerCase();
                 if (labelName.includes(keyword)) {
                     item.querySelector('.label-checkbox').checked = true;
+                    if (!firstMatch) firstMatch = item;
                 }
             });
+
+            if (firstMatch) {
+                firstMatch.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
             updateFooter();
         }
 
