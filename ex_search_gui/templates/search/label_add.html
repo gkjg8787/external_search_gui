@@ -101,7 +101,8 @@
 <div class="container">
     <h1>ラベル追加</h1>
 
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; max-width: 800px; margin-left: auto; margin-right: auto;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; max-width: 800px; margin-left: auto; margin-right: auto;">
+        <a href="{{ url_for('read_labels') }}" class="btn" style="background-color: #6c757d; color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px;">戻る</a>
         <button type="button" class="btn-open-modal" onclick="openCopyModal()">
             既存からコピー
         </button>
@@ -266,6 +267,7 @@ function renderModalLabels(labels) {
             <p><strong>クエリ:</strong> ${escapeHtml(label.query || '')}</p>
             <p><strong>エンコーディング:</strong> ${escapeHtml(label.query_encoding)}</p>
             <p><strong>ダウンロードタイプ:</strong> ${escapeHtml(label.download_type)}</p>
+            <p><strong>ダウンロード設定:</strong> <pre><code>${escapeHtml(JSON.stringify(label.download_config, null, 2))}</code></pre></p>
         `;
 
         li.appendChild(header);
