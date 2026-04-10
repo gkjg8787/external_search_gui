@@ -182,6 +182,14 @@ async function fetchDownloadConfigTemplate() {
 }
 
 /**
+ * HTMLエスケープ
+ */
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return unsafe;
+    return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+/**
  * コピー用モーダルを開く
  */
 async function openCopyModal() {
@@ -225,21 +233,43 @@ function renderModalLabels(labels) {
     labels.forEach(label => {
         const li = document.createElement('li');
         li.className = 'label-item';
-        li.innerHTML = `
-            <div class="label-header">
-                <strong>${label.label_name}</strong>
-                <div class="label-actions">
-                    <button type="button" class="toggle-details-btn" onclick="toggleModalDetails(this)">詳細</button>
-                    <button type="button" class="copy-btn" onclick='copyToForm(${JSON.stringify(label).replace(/'/g, "\\'")})'>コピー</button>
-                </div>
-            </div>
-            <div class="label-details collapsed">
-                <p><strong>ベースURL:</strong> ${label.base_url}</p>
-                <p><strong>クエリ:</strong> ${label.query || ''}</p>
-                <p><strong>エンコーディング:</strong> ${label.query_encoding}</p>
-                <p><strong>ダウンロードタイプ:</strong> ${label.download_type}</p>
-            </div>
+
+        // ヘッダー（ラベル名とボタン）の構築
+        const header = document.createElement('div');
+        header.className = 'label-header';
+        header.innerHTML = `<strong>${escapeHtml(label.label_name)}</strong>`;
+
+        const actions = document.createElement('div');
+        actions.className = 'label-actions';
+
+        const detailsBtn = document.createElement('button');
+        detailsBtn.type = 'button';
+        detailsBtn.className = 'toggle-details-btn';
+        detailsBtn.textContent = '詳細';
+        detailsBtn.onclick = () => toggleModalDetails(detailsBtn);
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'copy-btn';
+        copyBtn.textContent = 'コピー';
+        copyBtn.onclick = () => copyToForm(label); // オブジェクトを直接渡すので安全
+
+        actions.appendChild(detailsBtn);
+        actions.appendChild(copyBtn);
+        header.appendChild(actions);
+
+        // 詳細情報の構築
+        const details = document.createElement('div');
+        details.className = 'label-details collapsed';
+        details.innerHTML = `
+            <p><strong>ベースURL:</strong> ${escapeHtml(label.base_url)}</p>
+            <p><strong>クエリ:</strong> ${escapeHtml(label.query || '')}</p>
+            <p><strong>エンコーディング:</strong> ${escapeHtml(label.query_encoding)}</p>
+            <p><strong>ダウンロードタイプ:</strong> ${escapeHtml(label.download_type)}</p>
         `;
+
+        li.appendChild(header);
+        li.appendChild(details);
         list.appendChild(li);
     });
 }
