@@ -50,6 +50,21 @@
             background-color: #0056b3;
         }
 
+        /* モーダル関連のスタイル */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 8px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-body { max-height: 400px; overflow-y: auto; }
+        .modal-footer { border-top: 1px solid #ddd; padding-top: 15px; text-align: right; margin-top: 15px; }
+        
+        .search-box { margin-bottom: 15px; }
+        .search-box input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+        .copy-btn { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+        .copy-btn:hover { background-color: #218838; }
+        .btn-open-modal { background-color: #6f42c1; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        .btn-open-modal:hover { background-color: #5a32a3; }
+
         /* ダークモード対応 */
         @media (prefers-color-scheme: dark) {
             .form-container {
@@ -70,6 +85,13 @@
             .form-actions button {
                 background-color: #0056b3;
             }
+            .modal-content { background-color: #2d2d2d; border-color: #555; }
+            .modal-header, .modal-footer { border-color: #555; }
+            .search-box input { background-color: #3c3c3c; color: #e0e0e0; border-color: #555; }
+            .label-item { border-bottom-color: #444; }
+            .label-details { background-color: #333; color: #ccc; }
+            .toggle-details-btn { color: #aaa; border-color: #555; }
+            .btn-open-modal { background-color: #5a32a3; }
         }
     </style>
 {% endblock %}
@@ -78,6 +100,12 @@
 
 <div class="container">
     <h1>ラベル追加</h1>
+
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; max-width: 800px; margin-left: auto; margin-right: auto;">
+        <button type="button" class="btn-open-modal" onclick="openCopyModal()">
+            既存からコピー
+        </button>
+    </div>
 
     <div class="form-container">
         <form method="post" action="{{ url_for('read_labels_add_confirm') }}">
@@ -115,8 +143,29 @@
         </form>
     </div>
 </div>
-
+<!-- 既存ラベルコピー用モーダル -->
+<div id="copyModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>既存ラベルからコピー</h2>
+            <span style="cursor:pointer; font-size: 24px;" onclick="closeCopyModal()">&times;</span>
+        </div>
+        <div class="search-box">
+            <input type="text" id="modalSearchInput" placeholder="ラベル名で検索..." oninput="filterModalLabels()">
+        </div>
+        <div class="modal-body">
+            <ul id="modalLabelList" class="label-list">
+                <!-- JSで動的に追加 -->
+            </ul>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn" style="background-color:#6c757d; color:white;" onclick="closeCopyModal()">キャンセル</button>
+        </div>
+    </div>
+</div>
 <script>
+    let allLabels = [];
+
 async function fetchDownloadConfigTemplate() {
     const select = document.getElementById('download_type');
     const optionType = select.value;
@@ -130,6 +179,112 @@ async function fetchDownloadConfigTemplate() {
     const response = await fetch(`{{ url_for('get_label_config_template') }}?option_type=${optionType}`);
     const data = await response.json();
     textarea.value = JSON.stringify(data, null, 2);
+}
+
+/**
+ * コピー用モーダルを開く
+ */
+async function openCopyModal() {
+    const modal = document.getElementById('copyModal');
+    const list = document.getElementById('modalLabelList');
+    modal.style.display = 'block';
+    
+    if (allLabels.length === 0) {
+        list.innerHTML = '<li>読み込み中...</li>';
+        try {
+            const response = await fetch("{{ url_for('get_labels') }}");
+            allLabels = await response.json();
+            renderModalLabels(allLabels);
+        } catch (error) {
+            list.innerHTML = `<li style="color:red;">エラー: ${error.message}</li>`;
+        }
+    } else {
+        renderModalLabels(allLabels);
+    }
+}
+
+/**
+ * モーダルを閉じる
+ */
+function closeCopyModal() {
+    document.getElementById('copyModal').style.display = 'none';
+}
+
+/**
+ * ラベル一覧を描画
+ */
+function renderModalLabels(labels) {
+    const list = document.getElementById('modalLabelList');
+    list.innerHTML = '';
+    
+    if (labels.length === 0) {
+        list.innerHTML = '<li>対象のラベルが見つかりません。</li>';
+        return;
+    }
+
+    labels.forEach(label => {
+        const li = document.createElement('li');
+        li.className = 'label-item';
+        li.innerHTML = `
+            <div class="label-header">
+                <strong>${label.label_name}</strong>
+                <div class="label-actions">
+                    <button type="button" class="toggle-details-btn" onclick="toggleModalDetails(this)">詳細</button>
+                    <button type="button" class="copy-btn" onclick='copyToForm(${JSON.stringify(label).replace(/'/g, "\\'")})'>コピー</button>
+                </div>
+            </div>
+            <div class="label-details collapsed">
+                <p><strong>ベースURL:</strong> ${label.base_url}</p>
+                <p><strong>クエリ:</strong> ${label.query || ''}</p>
+                <p><strong>エンコーディング:</strong> ${label.query_encoding}</p>
+                <p><strong>ダウンロードタイプ:</strong> ${label.download_type}</p>
+            </div>
+        `;
+        list.appendChild(li);
+    });
+}
+
+/**
+ * 検索フィルタリング
+ */
+function filterModalLabels() {
+    const keyword = document.getElementById('modalSearchInput').value.toLowerCase();
+    const filtered = allLabels.filter(l => l.label_name.toLowerCase().includes(keyword));
+    renderModalLabels(filtered);
+}
+
+/**
+ * 詳細表示の切り替え
+ */
+function toggleModalDetails(button) {
+    const details = button.closest('.label-header').nextElementSibling;
+    if (details.classList.contains('collapsed')) {
+        details.classList.remove('collapsed');
+        button.textContent = '閉じる';
+    } else {
+        details.classList.add('collapsed');
+        button.textContent = '詳細';
+    }
+}
+
+/**
+ * 選択したラベルのデータをフォームにコピー
+ */
+function copyToForm(label) {
+    document.getElementById('label_name').value = label.label_name + '_copy';
+    document.getElementById('base_url').value = label.base_url;
+    document.getElementById('query').value = label.query || '';
+    document.getElementById('query_encoding').value = label.query_encoding;
+    document.getElementById('download_type').value = label.download_type;
+    document.getElementById('download_config').value = JSON.stringify(label.download_config, null, 2);
+    
+    closeCopyModal();
+}
+
+// モーダル外クリックで閉じる
+window.onclick = function(event) {
+    const modal = document.getElementById('copyModal');
+    if (event.target == modal) closeCopyModal();
 }
 </script>
 
