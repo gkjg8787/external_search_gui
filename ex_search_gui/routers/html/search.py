@@ -25,7 +25,7 @@ from domain.models.search import command as search_command
 from databases.sql.util import get_async_session
 from app.label import SearchLabelViewTemplateService, ProductPageLabelMatchService
 from app.s2k import utils as s2k_utils
-from common.read_config import get_html_options
+from common.read_config import get_html_options, get_search_label_rules
 from domain.schemas.search.search import (
     SearchURLConfigSchema,
     SearchURLConfigPreviewRequest,
@@ -718,8 +718,13 @@ async def read_labels_grouping(
     group_repo = GroupRepository(db)
     groups = await group_repo.get_all_groups()
 
+    search_label_rules = get_search_label_rules()
+
     return templates.TemplateResponse(
         request=request,
         name="search/group_auto_create.html",
-        context={"groups": groups},
+        context={
+            "groups": groups,
+            "search_label_rules": search_label_rules,
+        },
     )

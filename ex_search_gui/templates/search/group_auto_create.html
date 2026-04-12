@@ -8,7 +8,7 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group .checkbox-label { display: flex; align-items: center; gap: 10px; font-weight: normal; }
-        .form-group input[type="text"], .form-group input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-group input[type="text"], .form-group input[type="number"], .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .form-group input[type="checkbox"] { width: auto; }
         .form-actions { text-align: right; margin-top: 20px; }
         .button { padding: 10px 20px; color: white; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; }
@@ -29,7 +29,7 @@
         @media (prefers-color-scheme: dark) {
             .form-container { background-color: #2d2d2d; }
             .form-group label, .form-group .checkbox-label { color: #e0e0e0; }
-            .form-group input[type="text"], .form-group input[type="number"] { background-color: #3c3c3c; color: #e0e0e0; border-color: #555; }
+            .form-group input[type="text"], .form-group input[type="number"], .form-group textarea { background-color: #3c3c3c; color: #e0e0e0; border-color: #555; }
             .message-success { background-color: #1a3c23; color: #c3e6cb; border-color: #2f663d; }
             .message-error { background-color: #491f22; color: #f5c6cb; border-color: #843534; }
             .group-selection-container { border-color: #555; }
@@ -89,9 +89,13 @@
 
             <div class="form-group">
                 <label class="checkbox-label">
-                    <input type="checkbox" id="dict_category_enable" checked>
+                    <input type="checkbox" id="dict_category_enable" checked onchange="toggleDictOptions()">
                     辞書によるグループの振り分け
                 </label>
+            </div>
+            <div id="dict_options" class="form-group">
+                <label for="category_dict">辞書設定 (JSON)</label>
+                <textarea id="category_dict" rows="10" style="font-family: monospace;">{{ search_label_rules | tojson_japanese(indent=2) }}</textarea>
             </div>
         </form>
         <div class="form-actions">
@@ -120,6 +124,11 @@
         document.getElementById('segment_options').style.display = enabled ? 'block' : 'none';
     }
 
+    function toggleDictOptions() {
+        const enabled = document.getElementById('dict_category_enable').checked;
+        document.getElementById('dict_options').style.display = enabled ? 'block' : 'none';
+    }
+
     function showMessage(message, type) {
         const messageArea = document.getElementById('message-area');
         messageArea.textContent = message;
@@ -145,13 +154,28 @@
             });
         }
 
+        const dictCategoryEnable = document.getElementById('dict_category_enable').checked;
+        let categoryDict = null;
+        if (dictCategoryEnable) {
+            try {
+                const dictValue = document.getElementById('category_dict').value;
+                categoryDict = JSON.parse(dictValue);
+            } catch (e) {
+                showMessage('辞書設定のJSON形式が正しくありません: ' + e.message, 'error');
+                resultsArea.innerHTML = '';
+                runBtn.disabled = false;
+                return;
+            }
+        }
+
         const requestBody = {
             groups_init: groupsInit,
             auto_create_new_groups: document.getElementById('auto_create_new_groups').checked,
             segment_split_enabled: document.getElementById('segment_split_enabled').checked,
             segment_delimiters: document.getElementById('segment_delimiters').value,
             min_segment_match: parseInt(document.getElementById('min_segment_match').value, 10),
-            dict_category_enable: document.getElementById('dict_category_enable').checked
+            dict_category_enable: dictCategoryEnable,
+            category_dict: categoryDict
         };
 
         try {
@@ -239,6 +263,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         toggleGroupSelection();
         toggleSegmentOptions();
+        toggleDictOptions();
     });
 </script>
 {% endblock %}

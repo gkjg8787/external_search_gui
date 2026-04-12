@@ -187,6 +187,7 @@ class GroupingLabelsRequest(BaseModel):
     segment_delimiters: str = r"[_]"
     min_segment_match: int = 2
     dict_category_enable: bool = True
+    category_dict: Optional[dict] = None
 
 
 class GroupingLabelsResponse(BaseModel):

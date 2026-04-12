@@ -688,9 +688,14 @@ async def post_labels_grouping(
     try:
         repo = urlconfig_repo(ses)
         labels = await repo.get_all(command=search_command.SearchURLConfigCommand())
-        category_dict = (
-            get_search_label_rules() if groupingreq.dict_category_enable else {}
-        )
+        category_dict = {}
+        if groupingreq.dict_category_enable:
+            # リクエストに辞書設定が含まれている場合はそれを使用し、なければデフォルトを使用する
+            # groupingreq.category_dict がスキーマに追加されていることを想定
+            category_dict = (
+                getattr(groupingreq, "category_dict", None) or get_search_label_rules()
+            )
+
         groups_init: dict[str, list[str]] = {}
         if groupingreq.groups_init:
             grepo = GroupRepository(ses)
