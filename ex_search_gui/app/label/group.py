@@ -34,21 +34,16 @@ def organize_labels(
                 potential_group_names.add(seg)
 
     # --- 2. 振り分け処理 ---
-    # 機能 A 用の逆引きマップ
-    rev_category_map = {}
-    if category_dict:
-        for group_name, keywords in category_dict.items():
-            for kw in keywords:
-                rev_category_map[kw.lower()] = group_name
-
     for label in labels:
         label_lower = label.lower()
 
         # 機能 A: category_dict に基づく部分一致
         if category_dict:
-            for kw, target_group in rev_category_map.items():
-                if kw in label_lower:
-                    result_groups[target_group].add(label)
+            for group_name, keywords in category_dict.items():
+                for kw in keywords:
+                    if kw.lower() in label_lower:
+                        result_groups[group_name].add(label)
+                        break  # このグループへの振り分けが確定したため、このグループの他のキーワードは確認不要
 
         # 機能 B: セグメントに由来するグループ名が含まれているか判定
         # ここを「完全一致」から「部分一致」のニュアンスに変更
