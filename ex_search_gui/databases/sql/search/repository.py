@@ -50,9 +50,13 @@ class SearchURLConfigRepositorySQL(search_repo.SearchURLConfigRepository):
         if command.id:
             stmt = stmt.where(m_search.SearchURLConfig.id == command.id)
         if command.label_name:
-            stmt = stmt.where(
-                m_search.SearchURLConfig.label_name.icontains(command.label_name)
-            )
+            label_name = command.label_name.strip()
+            if label_name:
+                keywords = [kw for kw in re.split(r"\s+", label_name) if kw]
+                for kw in keywords:
+                    stmt = stmt.where(
+                        m_search.SearchURLConfig.label_name.icontains(kw)
+                    )
         if command.base_url:
             stmt = stmt.where(
                 m_search.SearchURLConfig.base_url.icontains(command.base_url)

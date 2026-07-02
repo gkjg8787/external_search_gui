@@ -34,6 +34,8 @@ async def get_labels(
     db: AsyncSession = Depends(get_async_session),
     label: str | None = Query(default=None),
 ):
+    if label:
+        label = label.strip()
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(
         router_path=request.url.path,
