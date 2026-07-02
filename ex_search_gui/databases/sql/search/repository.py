@@ -124,9 +124,13 @@ class ProductPageConfigRepositorySQL(search_repo.ProductPageConfigRepository):
         if command.id:
             stmt = stmt.where(m_search.ProductPageConfig.id == command.id)
         if command.label_name:
-            stmt = stmt.where(
-                m_search.ProductPageConfig.label_name.icontains(command.label_name)
-            )
+            label_name = command.label_name.strip()
+            if label_name:
+                keywords = [kw for kw in re.split(r"\s+", label_name) if kw]
+                for kw in keywords:
+                    stmt = stmt.where(
+                        m_search.ProductPageConfig.label_name.icontains(kw)
+                    )
         if command.url_pattern:
             stmt = stmt.where(
                 m_search.ProductPageConfig.url_pattern.icontains(command.url_pattern)
